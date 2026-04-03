@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const SkillTreeLanding = () => {
     const navigate = useNavigate();
@@ -24,6 +25,20 @@ const SkillTreeLanding = () => {
     const [loading, setLoading] = useState(false);
     const [assessmentResult, setAssessmentResult] = useState(null);
     const [replayInfo, setReplayInfo] = useState(null); // { totalCredits, replayCost, completedLevels }
+    const [isOther, setIsOther] = useState(false);
+    const [courses, setCourses] = useState([]);
+
+    React.useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                const data = await api.getSubjects();
+                setCourses(data?.subjects || []);
+            } catch (err) {
+                console.error('[SkillTreeLanding] Error fetching subjects:', err);
+            }
+        };
+        fetchCourses();
+    }, []);
 
     const handleStartGame = () => {
         setStep('topic');
@@ -140,12 +155,14 @@ const SkillTreeLanding = () => {
         }
     };
 
-    const handleAnswerSubmit = () => {
-        if (!currentAnswer.trim()) return;
+    const handleAnswerSubmit = (selectedAnswer) => {
+        const answerToSubmit = selectedAnswer || currentAnswer;
+        if (!answerToSubmit || (typeof answerToSubmit === 'string' && !answerToSubmit.trim())) return;
 
         const newAnswers = [...answers, {
             question: questions[currentQuestionIndex].question,
-            answer: currentAnswer.trim()
+            answer: typeof answerToSubmit === 'string' ? answerToSubmit.trim() : answerToSubmit,
+            skillId: questions[currentQuestionIndex].skillId // Include skillId for backend MCQ verification
         }];
         setAnswers(newAnswers);
         setCurrentAnswer('');
@@ -294,16 +311,41 @@ const SkillTreeLanding = () => {
                                     </div>
                                 </div>
 
-                                <input
-                                    type="text"
-                                    value={topic}
-                                    onChange={(e) => setTopic(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && !loading && handleNext()}
-                                    className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 transition-all text-lg font-medium"
-                                    autoFocus
+                                <select
+                                    value={isOther ? 'other' : (topic || '')}
+                                    onChange={(e) => {
+                                        if (e.target.value === 'other') {
+                                            setIsOther(true);
+                                            setTopic('');
+                                        } else {
+                                            setIsOther(false);
+                                            setTopic(e.target.value);
+                                        }
+                                    }}
+                                    className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 transition-all text-lg font-medium mb-4"
                                     disabled={loading}
-                                    placeholder="e.g., Quantum Computing, Art History..."
-                                />
+                                >
+                                    <option value="" disabled>Select a course...</option>
+                                    {courses.map(c => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                    <option value="other">Other Topic...</option>
+                                </select>
+
+                                {isOther && (
+                                    <Animate animation="fade-in">
+                                        <input
+                                            type="text"
+                                            value={topic}
+                                            onChange={(e) => setTopic(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && !loading && handleNext()}
+                                            className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 transition-all text-lg font-medium"
+                                            autoFocus
+                                            disabled={loading}
+                                            placeholder="e.g., Quantum Computing, Art History..."
+                                        />
+                                    </Animate>
+                                )}
 
                                 <div className="flex gap-4 mt-6">
                                     <button
@@ -465,21 +507,51 @@ const SkillTreeLanding = () => {
                                             </p>
                                         </div>
 
-                                        <textarea
-                                            value={currentAnswer}
-                                            onChange={(e) => setCurrentAnswer(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && !e.shiftKey && !loading) {
-                                                    e.preventDefault();
-                                                    handleAnswerSubmit();
-                                                }
-                                            }}
-                                            placeholder="Share your thoughts... (Press Enter to submit)"
-                                            className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 transition-all resize-none text-lg"
-                                            rows={4}
-                                            autoFocus
-                                            disabled={loading}
-                                        />
+                                        {/* MCQ Options */}
+                                        {questions[currentQuestionIndex].options && questions[currentQuestionIndex].options.length > 0 ? (
+                                            <div className="space-y-3 mb-8">
+                                                {questions[currentQuestionIndex].options.map((option, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            setCurrentAnswer(option);
+                                                            // Auto-submit after a short delay for better UX
+                                                            setTimeout(() => handleAnswerSubmit(option), 300);
+                                                        }}
+                                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                                                            currentAnswer === option
+                                                                ? 'bg-white/10 border-white text-white'
+                                                                : 'bg-black border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                                                currentAnswer === option ? 'border-white bg-white' : 'border-zinc-700'
+                                                            }`}>
+                                                                {currentAnswer === option && <div className="w-2 h-2 bg-black rounded-full" />}
+                                                            </div>
+                                                            <span className="text-lg font-medium">{option}</span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <textarea
+                                                value={currentAnswer}
+                                                onChange={(e) => setCurrentAnswer(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !e.shiftKey && !loading) {
+                                                        e.preventDefault();
+                                                        handleAnswerSubmit();
+                                                    }
+                                                }}
+                                                placeholder="Share your thoughts... (Press Enter to submit)"
+                                                className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-white focus:ring-1 focus:ring-white/20 transition-all resize-none text-lg mb-8"
+                                                rows={4}
+                                                autoFocus
+                                                disabled={loading}
+                                            />
+                                        )}
                                     </div>
                                 )}
 

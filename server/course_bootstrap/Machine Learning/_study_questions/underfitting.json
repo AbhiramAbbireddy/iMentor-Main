@@ -6,71 +6,71 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "Which of the following scenarios best illustrates underfitting?",
+      "question": "Which of the following scenarios is an example of underfitting?",
       "options": [
-        "A) A linear model fits a quadratic relationship in the data.",
-        "B) A complex model overfits the training data.",
-        "C) A model with high variance underperforms on both training and test data.",
-        "D) A model with low variance performs well on both training and test data."
+        "A) A linear model fits a highly curved relationship in the data.",
+        "B) A polynomial model with high degree fits the training data well but performs poorly on the test set.",
+        "C) A model with too many features overfits the training data.",
+        "D) A model with too few features underfits the training data."
       ],
       "correct_option": "A",
-      "explanation": "A linear model cannot capture the quadratic relationship, leading to poor performance on both training and test data, which is a hallmark of underfitting.",
+      "explanation": "A linear model trying to fit a highly curved relationship in the data is a clear example of underfitting, as it fails to capture the essential patterns in the data.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "What does underfitting imply about a model’s bias and variance?",
+      "question": "Which of the following is a sign of underfitting?",
       "options": [
-        "A) High bias and high variance.",
-        "B) Low bias and high variance.",
-        "C) High bias and low variance.",
-        "D) Low bias and low variance."
+        "A) The model performs well on both the training and testing sets.",
+        "B) The model performs poorly on both the training and testing sets.",
+        "C) The model performs well on the training set but poorly on the testing set.",
+        "D) The model performs poorly on the training set but well on the testing set."
       ],
-      "correct_option": "C",
-      "explanation": "Underfitting is characterized by high bias and low variance, indicating that the model is systematically incorrect and does not vary much with different training sets.",
+      "correct_option": "B",
+      "explanation": "A model that performs poorly on both the training and testing sets is indicative of underfitting, as it fails to capture the underlying patterns in the data.",
       "difficulty": "intermediate",
-      "bloom_level": "understand"
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_3",
-      "question": "Which technique can help identify underfitting in a model?",
+      "question": "Which technique can help identify underfitting?",
       "options": [
-        "A) Cross-validation.",
-        "B) Regularization.",
-        "C) Increasing the model complexity.",
-        "D) Reducing the number of features."
+        "A) Cross-validation",
+        "B) Regularization",
+        "C) Increasing the number of features",
+        "D) Decreasing the model complexity."
       ],
       "correct_option": "A",
-      "explanation": "Cross-validation provides a more robust estimate of the model's performance on unseen data, helping to identify underfitting.",
+      "explanation": "Cross-validation can help identify underfitting by showing consistent poor performance across different subsets of the data.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following best describes the relationship between model complexity and underfitting?",
+      "question": "Which of the following actions can help mitigate underfitting?",
       "options": [
-        "A) Increasing model complexity always reduces underfitting.",
-        "B) Increasing model complexity can help reduce underfitting.",
-        "C) Increasing model complexity always increases underfitting.",
-        "D) Model complexity has no effect on underfitting."
+        "A) Decreasing the model complexity",
+        "B) Adding more features to the model",
+        "C) Reducing the learning rate",
+        "D) Increasing the regularization parameter."
       ],
       "correct_option": "B",
-      "explanation": "Increasing model complexity can help reduce underfitting by allowing the model to capture more complex relationships in the data.",
+      "explanation": "Adding more features to the model can help increase its complexity and better capture the underlying patterns in the data, thereby mitigating underfitting.",
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "evaluate"
     },
     {
       "id": "mcq_5",
-      "question": "Which of the following is a sign of underfitting in a machine learning model?",
+      "question": "Which of the following statements is true regarding underfitting?",
       "options": [
-        "A) The model performs well on both training and test data.",
-        "B) The model performs poorly on both training and test data.",
-        "C) The model performs well on training data but poorly on test data.",
-        "D) The model performs poorly on training data but well on test data."
+        "A) Underfitting occurs when the model is too complex for the data.",
+        "B) Underfitting can be identified by a large gap between training and testing errors.",
+        "C) Underfitting is best mitigated by increasing the regularization parameter.",
+        "D) Underfitting is often caused by a model that is too simple to capture the underlying patterns in the data."
       ],
-      "correct_option": "B",
-      "explanation": "Underfitting is indicated by poor performance on both training and test data, suggesting the model is too simple to capture the underlying patterns.",
+      "correct_option": "D",
+      "explanation": "Underfitting is caused by a model that is too simple to capture the underlying patterns in the data, leading to poor performance on both the training and testing sets.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
     }
@@ -78,69 +78,71 @@
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain why a simple linear model might underfit a dataset with a quadratic relationship between features and target.",
-      "model_answer": "A simple linear model cannot capture the quadratic relationship between the features and the target, leading to poor performance on both training and test data. This is because the linear model is too simplistic to represent the underlying patterns in the data, resulting in high bias and low variance.",
+      "question": "Explain the concept of underfitting in the context of predicting housing prices based on the number of rooms and square footage.",
+      "model_answer": "Underfitting occurs when a model, such as a simple linear regression, is unable to capture the complex, non-linear relationship between the number of rooms, square footage, and housing prices. This results in poor performance on both the training and testing sets, as the model fails to learn the essential features of the data.",
       "key_concepts": [
         "underfitting",
-        "bias",
-        "variance"
+        "linear regression",
+        "non-linear relationship"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "How can cross-validation help in identifying underfitting?",
-      "model_answer": "Cross-validation helps in identifying underfitting by providing a more robust estimate of the model's performance on unseen data. If the model performs poorly on both training and cross-validation sets, it suggests underfitting. This method allows us to assess the model's generalization ability more accurately.",
+      "question": "How can you use cross-validation to identify underfitting in a machine learning model?",
+      "model_answer": "Cross-validation can identify underfitting by showing consistent poor performance across different subsets of the data. If the model performs poorly on both the training and validation sets, it is likely underfitting. This indicates that the model is too simple to capture the underlying patterns in the data.",
       "key_concepts": [
         "cross-validation",
-        "underfitting"
+        "underfitting",
+        "performance"
       ],
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "apply"
     },
     {
       "id": "sa_3",
-      "question": "Discuss the implications of underfitting in real-world applications.",
-      "model_answer": "Underfitting can lead to missed opportunities for better predictions and decisions. In real-world applications, it can result in inaccurate models that fail to capture important patterns in the data. This can have significant consequences, such as incorrect business decisions, poor medical diagnoses, or suboptimal recommendations. Therefore, it is crucial to identify and address underfitting to improve model performance.",
+      "question": "Design a scenario where increasing the model complexity can help mitigate underfitting.",
+      "model_answer": "Consider a scenario where you are predicting the price of houses based on the number of rooms and square footage. Initially, a simple linear model is used, but it fails to capture the non-linear relationship. By adding polynomial terms (e.g., $x^2$, $x^3$) to the model, you can increase its complexity and better capture the underlying patterns in the data, thereby mitigating underfitting.",
       "key_concepts": [
+        "model complexity",
         "underfitting",
-        "real-world applications"
+        "polynomial regression"
       ],
       "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "bloom_level": "create"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "Underfitting",
-      "back": "A condition where a model is too simple to capture the underlying patterns in the data, resulting in poor performance on both training and unseen data. Characterized by high bias and low variance.",
-      "hint": "Think of a simple model failing to capture complex relationships."
+      "back": "A condition where a model is too simple to capture the underlying patterns in the data, resulting in poor performance on both the training and testing sets.",
+      "hint": "Think of a simple model failing to learn the essential features."
     },
     {
       "id": "fc_2",
-      "front": "Bias",
-      "back": "The difference between the expected prediction of the model and the true value of the target. High bias indicates that the model is systematically incorrect.",
-      "hint": "Error in the model's predictions due to oversimplification."
-    },
-    {
-      "id": "fc_3",
-      "front": "Variance",
-      "back": "The variability of the model's predictions for a given input. High variance indicates that the model is sensitive to the specific training data.",
-      "hint": "Error in the model's predictions due to overfitting."
-    },
-    {
-      "id": "fc_4",
       "front": "Cross-validation",
-      "back": "A technique used to assess the performance of a model on unseen data by partitioning the data into subsets and training the model on different combinations of these subsets.",
+      "back": "A technique used to assess the performance of a model by splitting the data into multiple subsets and evaluating the model's performance on each subset.",
       "hint": "A method to validate model performance."
     },
     {
+      "id": "fc_3",
+      "front": "Polynomial Regression",
+      "back": "A form of regression analysis in which the relationship between the independent variable x and the dependent variable y is modeled as an nth degree polynomial in x.",
+      "hint": "A way to increase model complexity."
+    },
+    {
+      "id": "fc_4",
+      "front": "Learning Rate",
+      "back": "A parameter in machine learning algorithms that determines the step size at each iteration while moving toward a minimum of a loss function.",
+      "hint": "Controls the speed of learning."
+    },
+    {
       "id": "fc_5",
-      "front": "Linear Model",
-      "back": "A model that assumes a linear relationship between the input features and the target variable. Often too simplistic to capture complex relationships in the data.",
-      "hint": "A basic model form, often underfitting."
+      "front": "Regularization",
+      "back": "A technique used to prevent overfitting by adding a penalty term to the loss function, which discourages the model from becoming too complex.",
+      "hint": "A method to control model complexity."
     }
   ],
   "topic_id": "bias_variance_tradeoff"

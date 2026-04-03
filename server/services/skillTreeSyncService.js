@@ -8,6 +8,8 @@
  * Called after Python Stage 9 (skill tree generation) via POST /api/gamification/skill-tree/sync
  */
 
+const fs = require('fs');
+const path = require('path');
 const SkillTree = require('../models/SkillTree');
 const log = require('../utils/logger');
 
@@ -58,13 +60,36 @@ async function syncSkillTreeToMongo(course, skillTreeNodes) {
         const tier = getTier(difficultyScore);
         tierCounters[tier] = (tierCounters[tier] || 0) + 1;
 
+        // Load assessment questions from disk if available (Stage 10: Study Questions integration)
+        let assessmentQuestions = [];
+        try {
+            const questionsPath = path.join(__dirname, '..', 'course_bootstrap', course, '_study_questions', `${skillId}.json`);
+            if (fs.existsSync(questionsPath)) {
+                const questionsData = JSON.parse(fs.readFileSync(questionsPath, 'utf-8'));
+                if (questionsData.mcq && Array.isArray(questionsData.mcq)) {
+                    assessmentQuestions = questionsData.mcq.map(q => ({
+                        difficulty: q.difficulty === 'beginner' ? 'easy' : (q.difficulty === 'advanced' ? 'hard' : 'medium'),
+                        question: q.question,
+                        options: q.options,
+                        correctAnswer: q.correct_option,
+                        explanation: q.explanation || ''
+                    }));
+                    log.info('SYSTEM', `Loaded ${assessmentQuestions.length} MCQs for skill: ${skillId}`);
+                }
+            }
+        } catch (err) {
+            log.warn('SYSTEM', `Failed to load assessment questions for ${skillId}: ${err.message}`);
+        }
+
         const upsertData = {
             skillId: skillId,
             name: node.subtopic_name || skillId,
             description: (node.learning_outcomes || []).join('. ').substring(0, 500) || `Subtopic: ${node.subtopic_name}`,
+            course: course,
             category: node.module_name || node.topic_name || course,
             prerequisites: node.prerequisites || [],
             masteryThreshold: 80, // Default mastery threshold
+            assessmentQuestions: assessmentQuestions,
             estimatedHours: node.estimated_study_hours || 2,
             difficulty: DIFFICULTY_MAP[node.skill_level] || 'intermediate',
             position: {
@@ -80,15 +105,17 @@ async function syncSkillTreeToMongo(course, skillTreeNodes) {
         try {
             const existing = await SkillTree.findOne({ skillId });
             if (existing) {
-                // Update existing — preserve assessmentQuestions, position overrides, and colors
+                // Update existing — now including assessmentQuestions if newly found/updated
                 await SkillTree.updateOne(
                     { skillId },
                     {
                         $set: {
                             name: upsertData.name,
                             description: upsertData.description,
+                            course: upsertData.course,
                             category: upsertData.category,
                             prerequisites: upsertData.prerequisites,
+                            assessmentQuestions: upsertData.assessmentQuestions.length > 0 ? upsertData.assessmentQuestions : existing.assessmentQuestions,
                             estimatedHours: upsertData.estimatedHours,
                             difficulty: upsertData.difficulty,
                             relatedTopics: upsertData.relatedTopics,

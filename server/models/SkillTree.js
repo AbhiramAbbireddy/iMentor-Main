@@ -33,7 +33,14 @@ const SkillNodeSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
-        // Examples: "Machine Learning", "Statistics", "Linear Algebra", "Programming"
+        // Examples: "Linear Regression", "Basics of ML", etc.
+    },
+    course: {
+        type: String,
+        required: true,
+        index: true,
+        trim: true
+        // Examples: "Machine Learning", "Data Science", etc.
     },
 
     // Prerequisites system

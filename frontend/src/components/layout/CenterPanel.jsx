@@ -187,6 +187,8 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
     const isUserAborted = useRef(false);
     // Track the question index at the moment the message was sent
     const capturedIndexRef = useRef(null);
+    // Prevent firing the auto-greeting more than once per session
+    const hasAutoGreetedRef = useRef(false);
 
     const isAdminFromToken = useMemo(() => {
         if (!regularUserToken) return false;
@@ -270,7 +272,8 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
             documentContextName: options.documentContextName,
             tutorMode,
             tutorModeType: effectiveTutorModeType,
-            currentModulePathId: currentModulePathId
+            currentModulePathId: currentModulePathId,
+            isAutoGreeting: options.isAutoGreeting || false,
         };
 
         // Add bounty information if this is a bounty answer
@@ -663,7 +666,7 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
             status: tutorMode ? 'Thinking…' : null // Initial status for Tutor Mode
         };
 
-        if (options.isTryAgain) {
+        if (options.isTryAgain || options.isAutoGreeting) {
             setMessages(prev => [...prev, placeholderMessage]);
         } else {
             setMessages(prev => [...prev, userMessage, placeholderMessage]);
@@ -749,7 +752,8 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
             // Add bounty flag to options if we have an active bounty
             const enrichedOptions = {
                 ...handlerOptions,
-                isBountyAnswer: !!activeBountyId
+                isBountyAnswer: !!activeBountyId,
+                isAutoGreeting: options.isAutoGreeting || false,
             };
 
             const SAFETY_TIMEOUT_MS = (effectiveCriticalThinking || tutorMode) ? 180000 : 120000;
@@ -834,6 +838,35 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
         }
     }, [location.state, setInitialPromptForNewSession, navigate, location.pathname]);
 
+    // ── Auto-greeting: fire the tutor opener when entering a fresh session ────
+    // Fires once per session (hasAutoGreetedRef) when:
+    //   • tutor mode is active
+    //   • no messages yet (empty chat)
+    //   • a session ID exists (auth + session resolved)
+    //   • not already waiting on a request
+    useEffect(() => {
+        if (!tutorMode || !currentSessionId || isActuallySendingAPI) return;
+        if (messages.length > 0) {
+            // Real messages arrived — mark as greeted so we never re-fire
+            hasAutoGreetedRef.current = true;
+            return;
+        }
+        if (hasAutoGreetedRef.current) return;
+
+        hasAutoGreetedRef.current = true;
+
+        const t = setTimeout(() => {
+            handleSendMessage('__tutor_init__', { isAutoGreeting: true });
+        }, 400);
+
+        return () => clearTimeout(t);
+    }, [tutorMode, currentSessionId, messages.length, isActuallySendingAPI, handleSendMessage]);
+
+    // Reset the auto-greet flag whenever the user starts a new session
+    useEffect(() => {
+        hasAutoGreetedRef.current = false;
+    }, [currentSessionId]);
+
     const handleFeatureClick = (feature) => {
         if (feature.path) {
             navigate(feature.path);
@@ -910,19 +943,24 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
                                         <button
                                             key={feature.title}
                                             onClick={() => handleFeatureClick(feature)}
-                                            className="group text-left p-3 rounded-vs transition-all duration-150 outline-none focus-visible:ring-1 focus-visible:ring-[--vs-border-hi]"
+                                            className="group text-left p-3.5 rounded-md transition-all duration-150 outline-none focus-visible:ring-1 focus-visible:ring-[--vs-border-hi]"
                                             style={{
                                                 background:   'var(--vs-sidebar)',
                                                 border:       '1px solid var(--vs-border)',
-                                                borderRadius: '4px',
+                                                borderRadius: '6px',
+                                                boxShadow:    '0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.15)',
                                             }}
                                             onMouseEnter={e => {
                                                 e.currentTarget.style.background    = 'var(--vs-surface)';
                                                 e.currentTarget.style.borderColor   = 'var(--vs-border-hi)';
+                                                e.currentTarget.style.boxShadow     = '0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)';
+                                                e.currentTarget.style.transform     = 'translateY(-1px)';
                                             }}
                                             onMouseLeave={e => {
                                                 e.currentTarget.style.background    = 'var(--vs-sidebar)';
                                                 e.currentTarget.style.borderColor   = 'var(--vs-border)';
+                                                e.currentTarget.style.boxShadow     = '0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.15)';
+                                                e.currentTarget.style.transform     = 'translateY(0)';
                                             }}
                                             aria-label={feature.title}
                                         >
@@ -935,8 +973,8 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
                                                 </div>
                                                 <div className="min-w-0">
                                                     <div
-                                                        className="text-xs font-semibold mb-0.5 truncate"
-                                                        style={{ color: 'var(--vs-text)' }}
+                                                        className="text-xs font-bold mb-0.5 truncate"
+                                                        style={{ color: '#ffffff' }}
                                                     >
                                                         {feature.title}
                                                     </div>

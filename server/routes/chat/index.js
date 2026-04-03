@@ -16,6 +16,7 @@ const log = require('../../utils/logger');
 const routerFeedback = require('../../services/routerFeedbackService');
 const { routeQuery } = require('../../services/semanticRouter');
 const { routeWithLLM } = require('../../services/llmToolRouter');
+const { decomposeQuery, buildHybridContextBlock } = require('../../services/hybridQueryDecomposer');
 
 const {
     streamEvent,
@@ -40,10 +41,11 @@ router.post('/message', validateChatMessage, injectContextualMemory, async (req,
         systemPrompt: clientProvidedSystemInstruction, criticalThinkingEnabled,
         documentContextName, filter, bountyId, bountyAnswer, useReAct,
         deepResearchMode, tutorModeType, currentModulePathId,
-        isKgRealtimeEnabled, userExplicitlyDisabledWebSearch
+        isKgRealtimeEnabled, userExplicitlyDisabledWebSearch,
+        isAutoGreeting,  // silent auto-init flag: don't save user message to DB
     } = req.body;
 
-    criticalThinkingEnabled = criticalThinkingEnabled === true;
+    isAutoGreeting = isAutoGreeting === true;
     useReAct = useReAct === true;
     // Issue 1.2: capture whether the USER explicitly requested ToT before semantic routing
     // can mutate criticalThinkingEnabled. Used in standardHandler to apply the lower gate (40).
@@ -194,6 +196,24 @@ router.post('/message', validateChatMessage, injectContextualMemory, async (req,
             // non-blocking debug telemetry only
         }
     };
+
+    // ── Hybrid sub-query decomposition (runs before keyword pre-check) ──────────
+    // Splits multi-part queries and classifies each part independently so that
+    // only the "recent / current" segments trigger web/academic search, while
+    // foundational/conceptual segments are answered from LLM knowledge alone.
+    const hybridDecomposition = decomposeQuery(query.trim(), {
+        tutorMode:          !!tutorMode,
+        deepResearchMode:   deepResearchMode === true,
+        userForcedWeb:      !!useWebSearch,
+        userForcedAcademic: !!useAcademicSearch,
+    });
+
+    if (hybridDecomposition.isHybrid && !userExplicitlyDisabledWebSearch) {
+        // Only upgrade retrieval flags — never downgrade what the user set
+        if (hybridDecomposition.needsWeb      && !useWebSearch)      useWebSearch      = true;
+        if (hybridDecomposition.needsAcademic && !useAcademicSearch) useAcademicSearch = true;
+        log.info('CHAT', `[HYBRID] Multi-part query detected — web:${useWebSearch} academic:${useAcademicSearch}`);
+    }
 
     // ── Keyword pre-check: news / current-events (zero-latency, before embedding) ──
     const _q = query.trim().toLowerCase();
@@ -577,6 +597,7 @@ Output style:
             queryIntent, estimatedComplexityScore, queryTokenCount, simpleFastPath,
             semanticRouting,   // full routing decision (intent, confidence, tools)
             requestContext, userMessageForDb,
+            isAutoGreeting,    // silent auto-init: skip user message in DB write
             startTime, performanceTracker,
             capturePerformance, captureDebugFromResponse, captureRedisStateFromCache,
             debugEnabled,
@@ -586,6 +607,8 @@ Output style:
             userRequestedToT,                                               // Issue 1.2
             disabledToggles,                                                // Issue 1.3
             userExplicitlyDisabledWebSearch: !!userExplicitlyDisabledWebSearch, // Issue 1.4
+            hybridDecomposition,                                            // sub-query routing plan
+            buildHybridContextBlock,                                        // helper for prompt injection
         };
 
         // ── Code routing ──────────────────────────────────────────────────────

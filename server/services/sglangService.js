@@ -21,8 +21,9 @@
  * During migration, keep Ollama as fallback; flip SGLANG_ENABLED=true when ready.
  */
 
-const log    = require('../utils/logger');
-const OpenAI = require('openai');
+const log         = require('../utils/logger');
+const OpenAI      = require('openai');
+const sglangCaps  = require('./sglangCapabilities');
 
 const SGLANG_ENABLED = process.env.SGLANG_ENABLED === 'true';
 
@@ -94,10 +95,10 @@ async function generateContentWithHistory(chatHistory, userQuery, systemPrompt =
     // Estimate input tokens and adjust maxTokens to prevent context overflow
     const allMessagesText = messages.map(m => m.content).join(' ');
     const estimatedInputTokens = Math.ceil(allMessagesText.length / 3.5); // ~3.5 chars/token for Qwen
-    const modelMaxContext = 16384; // RTX A4000 16GB — extended from 8192
-    const safetyBuffer = 500;
-    const availableForCompletion = Math.max(1024, modelMaxContext - estimatedInputTokens - safetyBuffer);
-    const maxTokens = Math.min(options.maxTokens || options.maxOutputTokens || 8192, availableForCompletion);
+    const modelMaxContext = sglangCaps.getModelMaxContext(); // live from /v1/models
+    const safetyBuffer = 256;
+    const availableForCompletion = Math.max(512, modelMaxContext - estimatedInputTokens - safetyBuffer);
+    const maxTokens = Math.min(options.maxTokens || 4096, availableForCompletion);
 
     log.info('AI', `[SGLang] generate → endpoint=${endpoint} model=${model}`);
     log.info('AI', `[SGLang] Token budget: input≈${estimatedInputTokens} + completion=${maxTokens} ≈ ${estimatedInputTokens + maxTokens} / ${modelMaxContext}`);
@@ -147,11 +148,19 @@ async function streamChat(chatHistory, userQuery, systemPrompt = null, options =
 
     log.info('AI', `[SGLang] stream → endpoint=${endpoint} model=${model}`);
 
+    // Compute safe token budget to avoid exceeding the model's 8192-token context window
+    const allText = messages.map(m => m.content).join(' ');
+    const estimatedInputTokens = Math.ceil(allText.length / 3.5);
+    const modelMaxContext = 8192;
+    const safetyBuffer = 256;
+    const availableForCompletion = Math.max(512, modelMaxContext - estimatedInputTokens - safetyBuffer);
+    const maxTokensForStream = Math.min(options.maxTokens || 4096, availableForCompletion);
+
     const chunks   = [];
     const stream   = await client.chat.completions.create({
         model,
         messages,
-        max_tokens:  options.maxTokens || 8192,
+        max_tokens:  maxTokensForStream,
         temperature: options.temperature || 0.7,
         stream:      true,
     });

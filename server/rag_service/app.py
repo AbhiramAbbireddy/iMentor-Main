@@ -951,65 +951,119 @@ async def search_qdrant_documents(body: QueryRequest):
         return ""
 
     if _is_course:
-        # ── Course curriculum path: query stn_notes + pedagogical_notes ─────
-        logger.info(f"[RAG] Course path for '{body.documentContextName}' → stn_notes + pedagogical_notes")
-        course_lower = (body.documentContextName or "").lower()
-        course_filter = qdrant_models.Filter(must=[
-            qdrant_models.FieldCondition(
-                key="course",
-                match=qdrant_models.MatchValue(value=course_lower)
-            )
-        ])
+        # ── Course path: stn_notes + pedagogical_notes + admin-uploaded PDFs ─
+        # Searches all three sources in parallel and merges results so that
+        # BOTH generated curriculum content AND raw uploaded PDFs are available.
+        logger.info(f"[RAG] Course path for '{body.documentContextName}' → stn_notes + pedagogical_notes + admin PDFs")
+        _course_raw   = (body.documentContextName or "").strip()
+        course_lower  = _course_raw.lower()
+        # Qdrant MatchValue is case-sensitive — try both the original name and
+        # lowercase so we match regardless of how the content was indexed.
+        _course_values = list(dict.fromkeys([_course_raw, course_lower, _course_raw.title()]))
+        course_filter = qdrant_models.Filter(
+            should=[
+                qdrant_models.FieldCondition(key="course", match=qdrant_models.MatchValue(value=v))
+                for v in _course_values
+            ]
+        )
+
+        # Build candidate filenames for admin-uploaded PDFs.
+        # Course names from Neo4j have no extension, but stored file_name does —
+        # try the most common permutations so we find the file regardless of case.
+        _admin_pdf_candidates = []
+        for _name in [_course_raw, _course_raw.title(), _course_raw.lower()]:
+            for _ext in [".pdf", ".PDF", ".docx", ".txt", ".md"]:
+                _cand = _name + _ext
+                if _cand not in _admin_pdf_candidates:
+                    _admin_pdf_candidates.append(_cand)
 
         async def _course_vector_search():
-            # Search both collections and merge results
-            stn_docs, stn_snippet, stn_map = await run_sync(
+            # Run all three collection searches in parallel
+            stn_task  = run_sync(
                 vector_service.search_documents,
                 query=body.query, k=body.k,
                 filter_conditions=course_filter,
-                collection_name="stn_notes"
+                collection_name=config.STN_QDRANT_COLLECTION
             )
-            ped_docs, ped_snippet, ped_map = await run_sync(
+            ped_task  = run_sync(
                 vector_service.search_documents,
                 query=body.query, k=body.k,
                 filter_conditions=course_filter,
-                collection_name="pedagogical_notes"
+                collection_name=config.PEDAGOGICAL_QDRANT_COLLECTION
             )
-            # Merge: interleave by index so both sources appear
-            merged_docs = []
-            for i in range(max(len(stn_docs), len(ped_docs))):
-                if i < len(stn_docs):
-                    merged_docs.append(stn_docs[i])
-                if i < len(ped_docs):
-                    merged_docs.append(ped_docs[i])
-            merged_docs = merged_docs[:body.k]  # cap at requested k
 
-            # Re-format context with merged docs
+            # Admin PDF: try candidate filenames sequentially until one matches
+            async def _try_admin_pdf():
+                for candidate in _admin_pdf_candidates:
+                    try:
+                        admin_filter = qdrant_models.Filter(must=[
+                            qdrant_models.FieldCondition(key="user_id",  match=qdrant_models.MatchValue(value="admin")),
+                            qdrant_models.FieldCondition(key="file_name", match=qdrant_models.MatchValue(value=candidate)),
+                        ])
+                        docs, snip, doc_map = await run_sync(
+                            vector_service.search_documents,
+                            query=body.query, k=body.k,
+                            filter_conditions=admin_filter,
+                        )
+                        if docs:
+                            logger.info(f"[RAG] Admin PDF match: '{candidate}' → {len(docs)} chunks")
+                            return docs, snip, doc_map
+                    except Exception as e_pdf:
+                        logger.warning(f"[RAG] Admin PDF search failed for '{candidate}': {e_pdf}")
+                logger.info(f"[RAG] No admin PDF found for course '{_course_raw}' (tried {len(_admin_pdf_candidates)} filenames)")
+                return [], "", {}
+
+            (stn_docs, _, _), (ped_docs, _, _), (pdf_docs, _, _) = await asyncio.gather(
+                stn_task, ped_task, _try_admin_pdf()
+            )
+
+            # Merge: interleave all three sources, cap at k
+            all_docs_typed = []
+            _max_range = max(len(stn_docs), len(ped_docs), len(pdf_docs), 0)
+            for i in range(_max_range):
+                if i < len(stn_docs):  all_docs_typed.append(("stn", stn_docs[i]))
+                if i < len(ped_docs):  all_docs_typed.append(("ped", ped_docs[i]))
+                if i < len(pdf_docs):  all_docs_typed.append(("pdf", pdf_docs[i]))
+            all_docs_typed = all_docs_typed[:body.k]
+
             parts = []
             merged_map = {}
-            for idx, doc in enumerate(merged_docs):
-                ci = idx + 1
+            for idx, (src_type, doc) in enumerate(all_docs_typed):
+                ci  = idx + 1
                 meta = doc.metadata
-                src_label = meta.get("subtopic_name") or meta.get("subtopic_id") or "Course Note"
-                topic = meta.get("topic_name", "")
-                content_key = "teaching_context" if "teaching_context" in meta else "content"
-                content = meta.get(content_key) or doc.page_content
-                preview = content[:300] + "..." if len(content) > 300 else content
-                parts.append(
-                    f"[{ci}] 📚 {src_label}" +
-                    (f" → {topic}" if topic else "") +
-                    f"\nContent: {preview}"
-                )
+                if src_type == "pdf":
+                    src_label = meta.get("file_name", "Course Document")
+                    section   = meta.get("section_context", "")
+                    content   = doc.page_content
+                    preview   = content[:300] + "..." if len(content) > 300 else content
+                    parts.append(
+                        f"[{ci}] 📄 {src_label}" +
+                        (f" — {section}" if section else "") +
+                        f"\nContent: {preview}"
+                    )
+                else:
+                    src_label   = meta.get("subtopic_name") or meta.get("subtopic_id") or "Course Note"
+                    topic       = meta.get("topic_name", "")
+                    content_key = "teaching_context" if "teaching_context" in meta else "content"
+                    content     = meta.get(content_key) or doc.page_content
+                    preview     = content[:300] + "..." if len(content) > 300 else content
+                    parts.append(
+                        f"[{ci}] 📚 {src_label}" +
+                        (f" → {topic}" if topic else "") +
+                        f"\nContent: {preview}"
+                    )
                 merged_map[str(ci)] = {
-                    "subject": src_label,
-                    "document_name": f"Course: {body.documentContextName}",
-                    "content_preview": preview,
-                    "full_content": content,
-                    "score": meta.get("score", 1.0),
-                    "subtopic_id": meta.get("subtopic_id"),
+                    "subject":          src_label,
+                    "document_name":    f"Course: {body.documentContextName}",
+                    "content_preview":  preview,
+                    "full_content":     content,
+                    "score":            meta.get("score", 1.0),
+                    "subtopic_id":      meta.get("subtopic_id"),
+                    "source_type":      src_type,
                 }
+
             merged_snippet = "\n\n---\n\n".join(parts) if parts else "No course material found for this topic."
-            return merged_docs, merged_snippet, merged_map
+            return [doc for _, doc in all_docs_typed], merged_snippet, merged_map
 
         try:
             facts_from_kg, (retrieved_docs, snippet_from_vector, docs_map) = await asyncio.gather(
@@ -1020,22 +1074,35 @@ async def search_qdrant_documents(body: QueryRequest):
             return _error(f"Query failed: {e}", 500)
 
     else:
-        # ── User-doc path: query my_qdrant_rag_collection filtered by user_id ─
+        # ── User-doc path: query my_qdrant_rag_collection ────────────────────
+        # Admin-uploaded PDFs (user_id="admin") must be accessible by any student.
+        # Use top-level should with two complete AND groups:
+        #   (student owns file AND name matches) OR (admin owns file AND name matches)
         logger.info(f"[RAG] User-doc path → my_qdrant_rag_collection (user={body.user_id}, doc={body.documentContextName})")
-        must_conditions = [
-            qdrant_models.FieldCondition(
-                key="user_id",
-                match=qdrant_models.MatchValue(value=body.user_id)
-            )
-        ]
+
+        _should_conditions = []
         if body.documentContextName:
-            must_conditions.append(
-                qdrant_models.FieldCondition(
-                    key="file_name",
-                    match=qdrant_models.MatchValue(value=body.documentContextName)
-                )
+            # Student's own document
+            _should_conditions.append(
+                qdrant_models.Filter(must=[
+                    qdrant_models.FieldCondition(key="user_id", match=qdrant_models.MatchValue(value=body.user_id)),
+                    qdrant_models.FieldCondition(key="file_name", match=qdrant_models.MatchValue(value=body.documentContextName)),
+                ])
             )
-        qdrant_filters = qdrant_models.Filter(must=must_conditions)
+            # Admin-uploaded document with same filename (shared course material)
+            if body.user_id != "admin":
+                _should_conditions.append(
+                    qdrant_models.Filter(must=[
+                        qdrant_models.FieldCondition(key="user_id", match=qdrant_models.MatchValue(value="admin")),
+                        qdrant_models.FieldCondition(key="file_name", match=qdrant_models.MatchValue(value=body.documentContextName)),
+                    ])
+                )
+        else:
+            # No specific document selected — return all of this student's content
+            _should_conditions.append(
+                qdrant_models.FieldCondition(key="user_id", match=qdrant_models.MatchValue(value=body.user_id))
+            )
+        qdrant_filters = qdrant_models.Filter(should=_should_conditions)
 
         async def _user_doc_vector_search():
             return await run_sync(
@@ -1832,6 +1899,341 @@ async def get_curriculum_structure_route(course: str):
     except Exception as e:
         logger.error(f"Error getting curriculum structure: {e}", exc_info=True)
         return _error(f"Failed to get curriculum structure: {e}", 500)
+
+
+@app.get("/curriculum/{course}/notes/{subtopic_id}")
+async def get_subtopic_notes_route(course: str, subtopic_id: str):
+    """Return all STN teaching-note chunks for a specific subtopic_id.
+    Used by the CourseViewerPanel to render lecture notes inline.
+    Searches both stn_notes and pedagogical_notes collections."""
+    course_values = [course, course.lower(), course.title()]
+    sub_lower = subtopic_id.lower()
+
+    async def _search_notes(collection_name: str):
+        # Try each case variant for the course field
+        all_docs = []
+        for cv in course_values:
+            filt = qdrant_models.Filter(must=[
+                qdrant_models.FieldCondition(key="course",       match=qdrant_models.MatchValue(value=cv)),
+                qdrant_models.FieldCondition(key="subtopic_id",  match=qdrant_models.MatchValue(value=sub_lower)),
+            ])
+            try:
+                docs, _, _ = await run_sync(
+                    vector_service.search_documents,
+                    query=subtopic_id.replace("_", " "),
+                    k=20,
+                    filter_conditions=filt,
+                    collection_name=collection_name,
+                )
+                all_docs.extend(docs)
+                if all_docs:
+                    break
+            except Exception as e_inner:
+                logger.warning(f"[notes] search failed in {collection_name} for course='{cv}': {e_inner}")
+        return all_docs
+
+    try:
+        stn_docs, ped_docs = await asyncio.gather(
+            _search_notes(config.STN_QDRANT_COLLECTION),
+            _search_notes(config.PEDAGOGICAL_QDRANT_COLLECTION),
+        )
+        # Prefer STN notes; augment with pedagogical if STN is thin
+        combined = stn_docs or ped_docs
+        if stn_docs and ped_docs:
+            combined = stn_docs + [d for d in ped_docs if d not in stn_docs]
+
+        notes = []
+        for doc in combined:
+            meta = doc.metadata
+            content_key = "teaching_context" if "teaching_context" in meta else "content"
+            raw_content  = meta.get(content_key) or doc.page_content or ""
+            notes.append({
+                "subtopic_id":   meta.get("subtopic_id", subtopic_id),
+                "subtopic_name": meta.get("subtopic_name", subtopic_id.replace("_", " ").title()),
+                "topic_name":    meta.get("topic_name", ""),
+                "course":        meta.get("course", course),
+                "content":       raw_content,
+                "preview":       raw_content[:400],
+            })
+
+        return {
+            "success":    True,
+            "course":     course,
+            "subtopic_id": subtopic_id,
+            "notes":      notes,
+            "count":      len(notes),
+        }
+    except Exception as e:
+        logger.error(f"Error fetching notes for {course}/{subtopic_id}: {e}", exc_info=True)
+        return _error(f"Failed to fetch notes: {e}", 500)
+
+
+# ─── Lecture markdown endpoint ────────────────────────────────────────────────
+# Reads the pre-generated lecture.md from disk and returns the Markdown slice
+# that corresponds to the requested subtopic/concept.  The lecture.md produced
+# by lecture_generator/note_writer.py has sections with anchors like:
+#   ## N. Concept Name {#concept-name}
+# We fuzzy-match the subtopic_id / subtopic name against those anchors/headers.
+
+def _normalise(s: str) -> str:
+    """Lower-case, strip punctuation, collapse spaces — for fuzzy matching."""
+    import re
+    s = s.lower()
+    s = re.sub(r"[^a-z0-9\s]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _find_lecture_md(course: str) -> str | None:
+    """Return the path to lecture.md for the given course, or None if not found."""
+    bootstrap_dir = config.COURSE_BOOTSTRAP_DIR
+    # Try exact course folder name first, then case-insensitive scan
+    candidates = []
+    try:
+        for entry in os.listdir(bootstrap_dir):
+            full = os.path.join(bootstrap_dir, entry)
+            if os.path.isdir(full):
+                candidates.append(entry)
+    except OSError:
+        return None
+
+    # Prefer exact match, then case-insensitive
+    course_lower = course.strip().lower()
+    matched_folder = None
+    for c in candidates:
+        if c.lower() == course_lower:
+            matched_folder = c
+            break
+    if matched_folder is None:
+        # Partial match
+        for c in candidates:
+            if course_lower in c.lower() or c.lower() in course_lower:
+                matched_folder = c
+                break
+    if matched_folder is None:
+        return None
+
+    course_folder = os.path.join(bootstrap_dir, matched_folder)
+    lecture_notes_dir = os.path.join(course_folder, "lecture_notes")
+    if not os.path.isdir(lecture_notes_dir):
+        return None
+
+    # Find any lecture.md inside lecture_notes/<AnySubdir>/
+    for sub in os.listdir(lecture_notes_dir):
+        candidate = os.path.join(lecture_notes_dir, sub, "lecture.md")
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def _extract_lecture_section(md_text: str, subtopic_id: str, subtopic_name: str) -> str | None:
+    """
+    Parse lecture.md and return the Markdown section for the matching concept.
+
+    Sections are delimited by level-2 headings:
+        ## N. Concept Name {#anchor}
+    We match on:
+      1. Anchor slug  → matches subtopic_id  (e.g. "machine-learning")
+      2. Normalised heading title → matches normalised subtopic_id / subtopic_name
+    Returns the full section text (from its ## heading up to, but not including,
+    the next ## heading or end-of-file), or None if no match is found.
+    """
+    import re
+
+    # Split into level-2 sections
+    # A section starts at a line that begins with "## "
+    section_pattern = re.compile(r'^(## .+)$', re.MULTILINE)
+    splits = list(section_pattern.finditer(md_text))
+
+    if not splits:
+        return None  # No sections found — return full text as fallback
+
+    sections: list[tuple[str, str]] = []  # (heading_line, section_body)
+    for i, m in enumerate(splits):
+        start = m.start()
+        end   = splits[i + 1].start() if i + 1 < len(splits) else len(md_text)
+        sections.append((m.group(0), md_text[start:end].rstrip()))
+
+    # Build query tokens
+    norm_id   = _normalise(subtopic_id.replace("_", " "))
+    norm_name = _normalise(subtopic_name) if subtopic_name else norm_id
+
+    # Also build the slug the way GitHub/Pandoc does: lower, replace spaces with -
+    def to_slug(s: str) -> str:
+        s = re.sub(r"[^a-z0-9\s-]", "", s.lower())
+        return re.sub(r"\s+", "-", s.strip())
+
+    id_slug   = to_slug(subtopic_id.replace("_", "-"))
+    name_slug = to_slug(subtopic_name) if subtopic_name else id_slug
+
+    best_section   = None
+    best_score     = 0
+
+    for heading_line, body in sections:
+        # Extract anchor: {#some-anchor}
+        anchor_match = re.search(r'\{#([^}]+)\}', heading_line)
+        anchor = anchor_match.group(1) if anchor_match else ""
+
+        # Strip number prefix and anchor from heading for text matching
+        # "## 1. Machine Learning {#machine-learning}" → "Machine Learning"
+        heading_text = re.sub(r'\{#[^}]+\}', '', heading_line)
+        heading_text = re.sub(r'^#+\s*\d+\.\s*', '', heading_text).strip()
+        norm_heading = _normalise(heading_text)
+
+        score = 0
+        # Exact anchor match → highest priority
+        if anchor and (anchor == id_slug or anchor == name_slug):
+            score = 100
+        # Normalised heading matches query tokens
+        elif norm_heading == norm_id or norm_heading == norm_name:
+            score = 90
+        # Heading contains the query
+        elif norm_id and norm_id in norm_heading:
+            score = 60
+        elif norm_name and norm_name in norm_heading:
+            score = 55
+        # Query contains the heading (query is broader)
+        elif norm_heading and norm_heading in norm_id:
+            score = 40
+        elif norm_heading and norm_heading in norm_name:
+            score = 35
+
+        if score > best_score:
+            best_score = score
+            best_section = body
+
+    # Require at least a weak match
+    if best_score >= 35:
+        return best_section
+
+    return None
+
+
+@app.get("/curriculum/{course}/lecture/{subtopic_id}")
+async def get_lecture_section_route(
+    course: str,
+    subtopic_id: str,
+    subtopic_name: str = "",
+    topic_name: str = "",
+):
+    """
+    Return student-facing lecture Markdown for a subtopic.
+
+    Priority:
+    1. Per-subtopic disk cache  (subtopics/{subtopic_id}.md)  — instant
+    2. lecture.md section match                               — instant if found
+    3. LLM generation from STN context (SGLang→Gemini→Groq)  — ~5-15 s first time
+       Result is cached to disk so future requests are instant.
+    """
+    try:
+        import subtopic_lecture_generator as _slg
+
+        name = subtopic_name or subtopic_id.replace("_", " ").title()
+
+        # ── 1. Per-subtopic disk cache ──────────────────────────────────────────
+        cached = await run_sync(_slg.load_from_cache, course, subtopic_id)
+        if cached:
+            return {
+                "success":       True,
+                "course":        course,
+                "subtopic_id":   subtopic_id,
+                "subtopic_name": name,
+                "markdown":      cached,
+                "matched":       True,
+                "source":        "cache",
+            }
+
+        # ── 2. lecture.md section match ─────────────────────────────────────────
+        md_path = await run_sync(_find_lecture_md, course)
+        if md_path:
+            md_text = await run_sync(lambda: open(md_path, encoding="utf-8").read())
+            section = await run_sync(_extract_lecture_section, md_text, subtopic_id, subtopic_name)
+            if section:
+                # Save to per-subtopic cache so next request is instant
+                await run_sync(_slg.save_to_cache, course, subtopic_id, section)
+                return {
+                    "success":       True,
+                    "course":        course,
+                    "subtopic_id":   subtopic_id,
+                    "subtopic_name": name,
+                    "markdown":      section,
+                    "matched":       True,
+                    "source":        "lecture_md",
+                }
+
+        # ── 3. LLM generation from STN ──────────────────────────────────────────
+        logger.info(f"[lecture] Generating subtopic note via LLM: {course}/{subtopic_id}")
+        markdown, from_cache = await run_sync(
+            _slg.get_or_generate_lecture,
+            course, subtopic_id, name, topic_name,
+        )
+        return {
+            "success":       True,
+            "course":        course,
+            "subtopic_id":   subtopic_id,
+            "subtopic_name": name,
+            "markdown":      markdown,
+            "matched":       from_cache or bool(markdown and not markdown.startswith("> ⚠️")),
+            "source":        "generated",
+            "generating":    not from_cache,
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching lecture section for {course}/{subtopic_id}: {e}", exc_info=True)
+        return _error(f"Failed to fetch lecture section: {e}", 500)
+
+
+@app.post("/curriculum/{course}/lecture/batch-generate")
+async def batch_generate_subtopic_lectures(course: str):
+    """
+    Trigger background pre-generation of per-subtopic lecture notes for all
+    subtopics in the course curriculum graph.  Safe to call multiple times —
+    subtopics that already have a cached note are skipped instantly.
+    """
+    try:
+        if not curriculum_graph_handler:
+            return _error("Curriculum graph handler not available (no subtopic list)", 503)
+
+        structure = await run_sync(curriculum_graph_handler.traverse_curriculum, course)
+        if not structure:
+            return _error(f"No curriculum structure found for '{course}'", 404)
+
+        # Flatten subtopics
+        subtopics_flat = []
+        for mod in (structure.get("modules") or []):
+            for top in (mod.get("topics") or []):
+                topic_name = top.get("name") or top.get("id") or ""
+                for sub in (top.get("subtopics") or []):
+                    subtopics_flat.append({
+                        "id":         sub.get("id") or "",
+                        "name":       sub.get("name") or "",
+                        "topic_name": topic_name,
+                    })
+
+        if not subtopics_flat:
+            return {"success": True, "course": course, "message": "No subtopics found", "count": 0}
+
+        import subtopic_lecture_generator as _slg
+
+        def _run_batch():
+            _slg.generate_all_subtopic_lectures(course, subtopics_flat)
+
+        # Run in background thread so the HTTP response returns immediately
+        import threading
+        t = threading.Thread(target=_run_batch, daemon=True)
+        t.start()
+
+        return {
+            "success": True,
+            "course":  course,
+            "message": f"Batch generation started for {len(subtopics_flat)} subtopics (background). "
+                       "Results will be cached to disk — subsequent requests will be instant.",
+            "count":   len(subtopics_flat),
+        }
+
+    except Exception as e:
+        logger.error(f"Batch lecture generation error for {course}: {e}", exc_info=True)
+        return _error(f"Batch generation failed: {e}", 500)
 
 
 @app.get("/curriculum/{course}/prerequisites/{topic_id}")

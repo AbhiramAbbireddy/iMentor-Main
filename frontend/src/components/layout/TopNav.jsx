@@ -25,6 +25,7 @@ import LevelBadge from '../gamification/LevelBadge.jsx';
 import RankBadge from '../gamification/RankBadge.jsx';
 import XPProgressModal from '../gamification/XPProgressModal.jsx';
 import { useUserLevel } from '../../hooks/useUserLevel.jsx';
+import FeedbackWidget from './FeedbackWidget.jsx';
 
 // ─── Text Size Control ────────────────────────────────────────────────────────
 // Four steps match common accessibility needs:
@@ -310,7 +311,8 @@ function TopNav({
                                 />
                             )}
 
-                            {/* User icon button */}
+                            {/* Product feedback — bug / enhancement report */}
+                            <FeedbackWidget />
                             <button
                                 onClick={() => setIsProfileDropdownOpen(p => !p)}
                                 className="relative flex items-center justify-center w-7 h-7 rounded-full transition-colors duration-150"

@@ -55,6 +55,9 @@ export const AppStateProvider = ({ children }) => {
     const [tutorMode, setTutorMode] = useState(false);
     const [tutorModeType, setTutorModeType] = useState(null); // 'structured' | 'general_socratic' | 'assistant'
 
+    // Course viewer panel — opens when an admin course is selected from KB dropdown
+    const [courseViewerOpen, setCourseViewerOpen] = useState(false);
+
     const toggleTheme = () => {
         // Theme button is disabled, only dark mode is active
     };
@@ -91,6 +94,12 @@ export const AppStateProvider = ({ children }) => {
                 localStorage.removeItem('aiTutorSelectedSubject');
             }
         }
+        // If clearing (null) while an admin course is active, also deselect the course
+        // so the state is fully consistent (no silent "RAG still on" after badge dismiss)
+        if (!documentFilename && selectedSubject !== null) {
+            setSelectedSubjectState(null);
+            localStorage.removeItem('aiTutorSelectedSubject');
+        }
     };
 
     const setSelectedSubject = (subjectName) => {
@@ -99,6 +108,7 @@ export const AppStateProvider = ({ children }) => {
             localStorage.setItem('aiTutorSelectedSubject', newSubject);
         } else {
             localStorage.removeItem('aiTutorSelectedSubject');
+            setCourseViewerOpen(false); // close viewer when course deselected
         }
         setSelectedSubjectState(newSubject);
 
@@ -138,6 +148,7 @@ export const AppStateProvider = ({ children }) => {
             initialActivityForNewSession, setInitialActivityForNewSession,
             tutorMode, setTutorMode,
             tutorModeType, setTutorModeType,
+            courseViewerOpen, setCourseViewerOpen,
             lastGeneralSessionId, setLastGeneralSessionId,
             lastTutorSessionId, setLastTutorSessionId
         }}>

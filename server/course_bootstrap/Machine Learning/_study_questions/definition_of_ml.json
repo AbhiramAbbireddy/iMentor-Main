@@ -8,78 +8,78 @@
       "id": "mcq_1",
       "question": "What is the primary goal of Machine Learning?",
       "options": [
-        "A) To create models that can predict outcomes based on data",
-        "B) To write code for web applications",
-        "C) To design databases for storing data",
-        "D) To develop algorithms for sorting data"
+        "A) To create models that can generalize from examples",
+        "B) To create models that can predict stock prices",
+        "C) To create models that can solve mathematical equations",
+        "D) To create models that can play chess"
       ],
       "correct_option": "A",
-      "explanation": "The primary goal of Machine Learning is to create models that can predict outcomes based on data, which aligns with the core concept of learning from examples and making predictions.",
+      "explanation": "The primary goal of Machine Learning is to create models that can generalize from examples, which is a core concept in the field.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following best describes the process of Machine Learning?",
-      "options": [
-        "A) Analyzing data to find patterns and then using those patterns to make predictions",
-        "B) Writing code to manually solve problems",
-        "C) Designing user interfaces for software",
-        "D) Creating databases to store data"
-      ],
-      "correct_option": "A",
-      "explanation": "The process of Machine Learning involves analyzing data to find patterns and then using those patterns to make predictions, which is a core aspect of the field.",
-      "difficulty": "beginner",
-      "bloom_level": "remember"
-    },
-    {
-      "id": "mcq_3",
       "question": "Which of the following is NOT a type of Machine Learning?",
       "options": [
         "A) Supervised Learning",
         "B) Unsupervised Learning",
         "C) Reinforcement Learning",
-        "D) Parallel Learning"
+        "D) Predictive Learning"
       ],
       "correct_option": "D",
-      "explanation": "Parallel Learning is not a recognized type of Machine Learning. Supervised, Unsupervised, and Reinforcement Learning are all recognized types.",
+      "explanation": "Predictive Learning is not a recognized type of Machine Learning. The other options are all recognized types.",
+      "difficulty": "beginner",
+      "bloom_level": "remember"
+    },
+    {
+      "id": "mcq_3",
+      "question": "In which scenario would you use Machine Learning to improve performance over time?",
+      "options": [
+        "A) When the data is static and does not change",
+        "B) When the data is dynamic and changes over time",
+        "C) When the data is too small to be useful",
+        "D) When the data is too large to be processed manually"
+      ],
+      "correct_option": "B",
+      "explanation": "Machine Learning is particularly useful when the data is dynamic and changes over time, as it can adapt to new patterns.",
       "difficulty": "intermediate",
-      "bloom_level": "understand"
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_4",
-      "question": "In the context of Machine Learning, what does the term 'generalization' refer to?",
+      "question": "Which of the following best describes the concept of 'generalization' in Machine Learning?",
       "options": [
-        "A) The process of training a model on a large dataset",
-        "B) The ability of a model to perform well on new, unseen data",
-        "C) The process of collecting more data for training",
-        "D) The ability of a model to perform well on the training data"
+        "A) The ability of a model to perform well on the training data",
+        "B) The ability of a model to perform well on unseen data",
+        "C) The ability of a model to perform well on the same data multiple times",
+        "D) The ability of a model to perform well on data from different sources"
       ],
       "correct_option": "B",
-      "explanation": "Generalization refers to the ability of a model to perform well on new, unseen data, which is a key goal in Machine Learning.",
+      "explanation": "Generalization refers to the ability of a model to perform well on unseen data, which is a key goal in Machine Learning.",
       "difficulty": "intermediate",
-      "bloom_level": "understand"
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_5",
-      "question": "Which of the following scenarios best illustrates the concept of 'learning from data'?",
+      "question": "Which of the following is a key challenge in Machine Learning?",
       "options": [
-        "A) A computer program that sorts emails into spam and non-spam categories based on predefined rules",
-        "B) A computer program that predicts stock prices based on historical data",
-        "C) A computer program that generates random numbers",
-        "D) A computer program that plays chess by following a set of predefined moves"
+        "A) Finding the right data",
+        "B) Choosing the right programming language",
+        "C) Ensuring the model is computationally efficient",
+        "D) Avoiding overfitting"
       ],
-      "correct_option": "B",
-      "explanation": "A computer program that predicts stock prices based on historical data is an example of learning from data, as it uses past data to make predictions about future trends.",
+      "correct_option": "D",
+      "explanation": "Avoiding overfitting is a key challenge in Machine Learning, as it involves creating models that generalize well to new data.",
       "difficulty": "advanced",
-      "bloom_level": "apply"
+      "bloom_level": "evaluate"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
       "question": "Explain the difference between supervised and unsupervised learning.",
-      "model_answer": "Supervised learning involves training a model on labeled data, where the correct output is provided for each input. The model learns to predict the correct output for new, unseen data. In contrast, unsupervised learning involves training a model on unlabeled data, where the goal is to find patterns or structure in the data without any predefined labels.",
+      "model_answer": "Supervised learning involves training a model on labeled data, where the correct output is known. The model learns to predict the output for new, unseen data. In contrast, unsupervised learning involves training a model on unlabeled data, where the goal is often to discover hidden patterns or group similar data points together.",
       "key_concepts": [
         "supervised learning",
         "unsupervised learning"
@@ -89,60 +89,58 @@
     },
     {
       "id": "sa_2",
-      "question": "How does the concept of 'learning from data' apply to real-world applications?",
-      "model_answer": "The concept of 'learning from data' is widely applicable in real-world scenarios. For example, in healthcare, Machine Learning models can be trained on patient data to predict disease outcomes or recommend treatment plans. In finance, models can be used to predict stock prices or detect fraudulent transactions. In marketing, models can analyze customer data to personalize advertisements or predict purchasing behavior. These applications demonstrate how Machine Learning can be used to make informed decisions and improve processes.",
+      "question": "How does the concept of 'generalization' relate to the real-world application of Machine Learning?",
+      "model_answer": "Generalization is crucial in real-world applications because it ensures that the model's predictions are accurate and reliable when applied to new, unseen data. In healthcare, for example, a model that can generalize well can provide accurate diagnoses based on patient data, which is essential for effective treatment.",
       "key_concepts": [
-        "healthcare",
-        "finance",
-        "marketing"
-      ],
-      "difficulty": "advanced",
-      "bloom_level": "apply"
-    },
-    {
-      "id": "sa_3",
-      "question": "Critique the statement: 'Machine Learning is just about writing code.'",
-      "model_answer": "The statement 'Machine Learning is just about writing code' is overly simplistic. While coding is a crucial part of implementing Machine Learning models, it is not the entirety of the field. Machine Learning involves understanding data, designing algorithms, and evaluating model performance. It requires a combination of statistical knowledge, programming skills, and domain expertise. Writing code is only one aspect of the process, and the true essence of Machine Learning lies in the ability to learn from data and make predictions or decisions based on that learning.",
-      "key_concepts": [
-        "coding",
-        "data understanding",
-        "algorithm design",
-        "model evaluation"
+        "generalization",
+        "real-world application"
       ],
       "difficulty": "advanced",
       "bloom_level": "evaluate"
+    },
+    {
+      "id": "sa_3",
+      "question": "Discuss the importance of understanding the prerequisites for Machine Learning, such as data and algorithms.",
+      "model_answer": "Understanding the prerequisites for Machine Learning, such as data and algorithms, is crucial because it forms the foundation for more advanced topics. Data is the input that the model learns from, and algorithms are the methods used to create the model. Without a solid understanding of these basics, it is difficult to grasp more complex models and techniques.",
+      "key_concepts": [
+        "prerequisites",
+        "data",
+        "algorithms"
+      ],
+      "difficulty": "beginner",
+      "bloom_level": "understand"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "Machine Learning",
-      "back": "A subset of artificial intelligence that focuses on developing algorithms that can learn from and make predictions on data. It involves creating models that can generalize from examples, allowing them to perform tasks such as classification, regression, and clustering.",
-      "hint": "Think of learning from examples and making predictions."
+      "back": "A field of study that gives computers the ability to learn without being explicitly programmed. It involves developing algorithms that can learn from and make predictions on data.",
+      "hint": "Think of learning as a process."
     },
     {
       "id": "fc_2",
       "front": "Generalization",
-      "back": "The ability of a model to perform well on new, unseen data, rather than just on the training data. It is a key goal in Machine Learning to ensure that models can make accurate predictions in real-world scenarios.",
-      "hint": "Focus on predicting new data."
+      "back": "The ability of a model to perform well on unseen data, which is a key goal in Machine Learning. It involves creating models that can adapt to new patterns and generalize from examples.",
+      "hint": "Focus on unseen data."
     },
     {
       "id": "fc_3",
       "front": "Supervised Learning",
-      "back": "A type of Machine Learning where the model is trained on labeled data, meaning that the correct output is provided for each input. The goal is to predict the correct output for new, unseen data.",
-      "hint": "Think of labeled data and predicting outcomes."
+      "back": "A type of Machine Learning where the model is trained on labeled data, and the goal is to predict the correct output for new, unseen data.",
+      "hint": "Labeled data, predict output."
     },
     {
       "id": "fc_4",
       "front": "Unsupervised Learning",
-      "back": "A type of Machine Learning where the model is trained on unlabeled data, meaning that the correct output is not provided. The goal is to find patterns or structure in the data without any predefined labels.",
-      "hint": "Focus on finding patterns in unlabeled data."
+      "back": "A type of Machine Learning where the model is trained on unlabeled data, and the goal is often to discover hidden patterns or group similar data points together.",
+      "hint": "Unlabeled data, find patterns."
     },
     {
       "id": "fc_5",
-      "front": "Regression",
-      "back": "A type of supervised learning problem where the goal is to predict a continuous output variable based on one or more input variables. It is commonly used for tasks such as predicting stock prices or house prices.",
-      "hint": "Think of predicting a continuous value."
+      "front": "Overfitting",
+      "back": "A phenomenon in Machine Learning where a model performs well on the training data but poorly on unseen data. It occurs when the model is too complex and captures noise in the training data.",
+      "hint": "Complex model, poor performance."
     }
   ],
   "topic_id": "introduction_to_machine_learning"

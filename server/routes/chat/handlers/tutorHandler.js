@@ -23,6 +23,19 @@ const socketService = require('../../../services/socketService');
 const { triggerPeriodicAnalysis } = require('../../../middleware/contextualMemoryMiddleware');
 const log = require('../../../utils/logger');
 const { streamEvent, TUTOR_MODE_TYPES, emitTutorKnowledgeEvents } = require('../helpers');
+const { computeTurnXp, awardTurnXpAsync, scheduleQualityBonusAsync } = require('../../../services/tutorXpService');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build the $each array for ChatHistory push.
+ * When isAutoGreeting is true we skip the phantom user message so history stays clean.
+ */
+function buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting) {
+    return isAutoGreeting ? [aiMessageForDb] : [userMessageForDb, aiMessageForDb];
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERAL SOCRATIC (no course context)
@@ -35,7 +48,9 @@ async function handleGeneral(res, ctx) {
     const {
         tutorMode, tutorModeType, query, sessionId, userId,
         llmConfig, chatSession, userMessageForDb, contextualMemory,
+        isAutoGreeting,
     } = ctx;
+    const effectiveQuery = (query === '__tutor_init__') ? '' : query.trim();
 
     if (!tutorMode || tutorModeType !== TUTOR_MODE_TYPES.GENERAL_SOCRATIC) return false;
 
@@ -63,6 +78,8 @@ async function handleGeneral(res, ctx) {
         } catch (smErr) {
             log.warn('TUTOR', `State machine init failed (non-fatal): ${smErr.message}`);
         }
+
+        let currentSmState = smState;  // hoisted — updated after state machine writes
 
         const tutorResult = await processTutorResponse(
             query.trim(),
@@ -96,8 +113,10 @@ async function handleGeneral(res, ctx) {
                     await tutorStateMachine.advanceLearningStep(sessionId);
                 }
                 const freshSmState = await tutorStateMachine.getSessionState(sessionId);
+                currentSmState = freshSmState;
                 if (freshSmState?.consecutiveCorrect >= 2) {
                     await tutorStateMachine.advanceCognitiveLevel(sessionId);
+                    currentSmState = await tutorStateMachine.getSessionState(sessionId);
                     await tutorStateMachine.resetHints(sessionId);
                 } else if (statusStr === 'WRONG' || statusStr === 'UNKNOWN') {
                     await tutorStateMachine.incrementHints(sessionId);
@@ -110,6 +129,12 @@ async function handleGeneral(res, ctx) {
                 log.warn('TUTOR', `State machine update failed (non-fatal): ${smUpdateErr.message}`);
             }
         }
+
+        // ── Live XP — computed once here, used in reply and deferred award ────
+        const _genCls = (() => { const c = tutorResult?.classification; return typeof c === 'object' ? (c?.status || 'UNKNOWN') : (c || 'UNKNOWN'); })();
+        const _genCogLvl = currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || tutorState?.cognitiveLevel || 'L1_CONCEPT';
+        const _genHints  = tutorState?.hintsGiven || 0;
+        const genXpResult = tutorResult ? computeTurnXp(_genCls, _genCogLvl, _genHints) : null;
 
         if (!tutorResult) {
             const fallbackReply = {
@@ -127,10 +152,11 @@ async function handleGeneral(res, ctx) {
             // Deferred DB write — don't block the response
             setImmediate(async () => {
                 try {
+                    const _fallbackAiMsg = { role: 'model', parts: [{ text: fallbackReply.text }], timestamp: new Date(), source_pipeline: 'tutor-general-fallback' };
                     await ChatHistory.findOneAndUpdate(
                         { sessionId, userId },
                         {
-                            $push: { messages: { $each: [userMessageForDb, { role: 'model', parts: [{ text: fallbackReply.text }], timestamp: new Date(), source_pipeline: 'tutor-general-fallback' }] } },
+                            $push: { messages: { $each: buildMessagesEach(userMessageForDb, _fallbackAiMsg, isAutoGreeting) } },
                             $set: { isTutorMode: true, tutorModeType: TUTOR_MODE_TYPES.GENERAL_SOCRATIC, updatedAt: new Date() }
                         },
                         { upsert: true }
@@ -166,10 +192,11 @@ async function handleGeneral(res, ctx) {
             // Deferred DB write — don't block the response
             setImmediate(async () => {
                 try {
+                    const _masteryAiMsg = { role: 'model', parts: [{ text: masteryText }], timestamp: new Date(), source_pipeline: 'tutor-general-mastery' };
                     await ChatHistory.findOneAndUpdate(
                         { sessionId, userId },
                         {
-                            $push: { messages: { $each: [userMessageForDb, { role: 'model', parts: [{ text: masteryText }], timestamp: new Date(), source_pipeline: 'tutor-general-mastery' }] } },
+                            $push: { messages: { $each: buildMessagesEach(userMessageForDb, _masteryAiMsg, isAutoGreeting) } },
                             $set: { isTutorMode: true, tutorModeType: TUTOR_MODE_TYPES.GENERAL_SOCRATIC, updatedAt: new Date() }
                         },
                         { upsert: true }
@@ -195,19 +222,21 @@ async function handleGeneral(res, ctx) {
             criticalThinkingCues: [],
             masteryProgress: tutorResult.masteryProgress || null,
             steps: tutorResult.steps || [],
-            confidenceScore: 85
+            confidenceScore: 85,
+            xpDelta: genXpResult
         };
 
         streamEvent(res, { type: 'final_answer', content: socraticReply });
         res.end();
 
-        // Deferred DB write — don't block the response
+        // Deferred DB write + live XP award — don't block the response
         setImmediate(async () => {
             try {
+                const _socraticAiMsg = { role: 'model', parts: [{ text: tutorResult.followUpQuestion }], timestamp: new Date(), source_pipeline: socraticReply.source_pipeline };
                 await ChatHistory.findOneAndUpdate(
                     { sessionId, userId },
                     {
-                        $push: { messages: { $each: [userMessageForDb, { role: 'model', parts: [{ text: tutorResult.followUpQuestion }], timestamp: new Date(), source_pipeline: socraticReply.source_pipeline }] } },
+                        $push: { messages: { $each: buildMessagesEach(userMessageForDb, _socraticAiMsg, isAutoGreeting) } },
                         $set: { isTutorMode: true, tutorModeType: TUTOR_MODE_TYPES.GENERAL_SOCRATIC, updatedAt: new Date() }
                     },
                     { upsert: true }
@@ -216,6 +245,12 @@ async function handleGeneral(res, ctx) {
                 triggerPeriodicAnalysis(sessionId, userId, messageCount, llmConfig);
             } catch (err) {
                 log.error('TUTOR', `Deferred DB write failed: ${err.message}`);
+            }
+            // Live XP award (deferred — zero latency impact)
+            if (genXpResult) {
+                const _gConceptName = tutorState?.teachingUnit || tutorState?.moduleTitle || 'general';
+                awardTurnXpAsync(userId, genXpResult.xp, _gConceptName, `tutor_${_genCls.toLowerCase()}`);
+                scheduleQualityBonusAsync(userId, query.trim(), tutorResult.followUpQuestion, _gConceptName, llmConfig);
             }
         });
 
@@ -290,10 +325,11 @@ async function handleGeneral(res, ctx) {
         criticalThinkingCues: []
     };
 
+    const _genIntroAiMsg = { role: 'model', parts: [{ text: initialResponse }], timestamp: new Date(), source_pipeline: 'tutor-general-introduction' };
     await ChatHistory.findOneAndUpdate(
         { sessionId, userId },
         {
-            $push: { messages: { $each: [userMessageForDb, { role: 'model', parts: [{ text: initialResponse }], timestamp: new Date(), source_pipeline: 'tutor-general-introduction' }] } },
+            $push: { messages: { $each: buildMessagesEach(userMessageForDb, _genIntroAiMsg, isAutoGreeting) } },
             $set: { isTutorMode: true, tutorModeType: TUTOR_MODE_TYPES.GENERAL_SOCRATIC, courseName: 'General', updatedAt: new Date() }
         },
         { upsert: true }
@@ -319,7 +355,9 @@ async function handleStructured(res, ctx) {
         tutorMode, tutorModeType, query, sessionId, userId,
         llmConfig, chatSession, userMessageForDb, contextualMemory,
         documentContextName, currentModulePathId, user: reqUser,
+        isAutoGreeting,
     } = ctx;
+    const effectiveQuery = (query === '__tutor_init__') ? '' : query.trim();
 
     if (!tutorMode || tutorModeType !== TUTOR_MODE_TYPES.COURSE_STRUCTURED) return false;
 
@@ -380,6 +418,8 @@ async function handleStructured(res, ctx) {
             log.warn('TUTOR', `State machine init failed (non-fatal): ${smErr.message}`);
         }
 
+        let currentSmState = smState;  // hoisted — updated after cognitive level writes
+
         // Fetch graph facts (non-blocking — augments context, failure is safe)
         let graphFacts = '';
         try {
@@ -434,8 +474,10 @@ async function handleStructured(res, ctx) {
                     await tutorStateMachine.advanceLearningStep(sessionId);
                 }
                 const freshSmState = await tutorStateMachine.getSessionState(sessionId);
+                currentSmState = freshSmState;
                 if (freshSmState?.consecutiveCorrect >= 2) {
                     await tutorStateMachine.advanceCognitiveLevel(sessionId);
+                    currentSmState = await tutorStateMachine.getSessionState(sessionId);
                     await tutorStateMachine.resetHints(sessionId);
                 } else if (statusStr === 'WRONG' || statusStr === 'UNKNOWN') {
                     await tutorStateMachine.incrementHints(sessionId);
@@ -448,6 +490,12 @@ async function handleStructured(res, ctx) {
                 log.warn('TUTOR', `State machine update failed (non-fatal): ${smUpdateErr.message}`);
             }
         }
+
+        // ── Live XP — pure computation (zero I/O), included in reply for instant display
+        const _strCls = (() => { const c = tutorResult?.classification; return typeof c === 'object' ? (c?.status || 'UNKNOWN') : (c || 'UNKNOWN'); })();
+        const _strCogLvl = currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || tutorState?.cognitiveLevel || 'L1_CONCEPT';
+        const _strHints  = tutorState?.hintsGiven || 0;
+        const xpResult  = tutorResult ? computeTurnXp(_strCls, _strCogLvl, _strHints, !!tutorResult.isMastered) : null;
 
         if (!tutorResult) {
             log.error('TUTOR', 'Failed to generate tutor response - LLM service unavailable');
@@ -592,7 +640,9 @@ async function handleStructured(res, ctx) {
                         startedAt: new Date().toISOString(),
                         socraticState: SOCRATIC_STATES.INTRODUCTION,
                         masteryScore: 0,
-                        cognitiveLevel: 'L1_CONCEPT',
+                        // Carry forward the cognitive level the student demonstrated.
+                        // The Socratic engine will adapt down if they struggle at this level.
+                        cognitiveLevel: currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || 'L1_CONCEPT',
                         history: [],
                         consecutiveUnderstands: 0
                     };
@@ -615,7 +665,8 @@ async function handleStructured(res, ctx) {
                 source_pipeline: 'tutor-mastery',
                 socraticState: nextTopicState ? SOCRATIC_STATES.INTRODUCTION : tutorResult.socraticState,
                 thinking: `Mastery achieved for "${tutorResult.moduleTitle}". Auto-advanced: ${nextTopicState ? 'Yes' : 'No'}.`,
-                criticalThinkingCues: []
+                criticalThinkingCues: [],
+                xpDelta: xpResult  // includes mastery bonus (isMastery=true was passed to computeTurnXp)
             };
 
             const aiMessageForDb = {
@@ -625,7 +676,7 @@ async function handleStructured(res, ctx) {
             await ChatHistory.findOneAndUpdate(
                 { sessionId, userId },
                 {
-                    $push: { messages: { $each: [userMessageForDb, aiMessageForDb], $slice: -100 } },
+                    $push: { messages: { $each: buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting), $slice: -100 } },
                     $set: { isTutorMode: true, tutorModeType: 'structured', updatedAt: new Date() }
                 },
                 { upsert: true }
@@ -665,6 +716,17 @@ async function handleStructured(res, ctx) {
 
             streamEvent(res, { type: 'final_answer', content: masteryReply });
             res.end();
+
+            // Deferred live XP award for mastery turn
+            setImmediate(() => {
+                if (xpResult) {
+                    const _mConceptName = tutorState?.teachingUnit || tutorState?.subtopicName || 'general';
+                    // Base turn XP + mastery bonus are combined inside xpResult.xp (isMastery=true)
+                    awardTurnXpAsync(userId, xpResult.xp, _mConceptName, 'tutor_mastery');
+                    scheduleQualityBonusAsync(userId, query.trim(), finalReplyText, _mConceptName, llmConfig);
+                }
+            });
+
             return true;
         }
         // ── End mastery handling ──────────────────────────────────────────────
@@ -683,6 +745,7 @@ async function handleStructured(res, ctx) {
             masteryProgress: tutorResult.masteryProgress || null,
             steps: tutorResult.steps || [],
             confidenceScore: 85,
+            xpDelta: xpResult,
             currentPosition: {
                 subtopicId: tutorState.subtopicId,
                 subtopicName: tutorState.subtopicName,
@@ -702,7 +765,7 @@ async function handleStructured(res, ctx) {
         await ChatHistory.findOneAndUpdate(
             { sessionId, userId },
             {
-                $push: { messages: { $each: [userMessageForDb, aiMessageForDb], $slice: -100 } },
+                $push: { messages: { $each: buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting), $slice: -100 } },
                 $set: { isTutorMode: true, tutorModeType: 'structured', updatedAt: new Date() }
             },
             { upsert: true }
@@ -713,6 +776,16 @@ async function handleStructured(res, ctx) {
 
         streamEvent(res, { type: 'final_answer', content: socraticReply });
         res.end();
+
+        // Deferred live XP award — zero latency impact
+        setImmediate(() => {
+            if (xpResult) {
+                const _sConceptName = tutorState?.teachingUnit || tutorState?.subtopicName || 'general';
+                awardTurnXpAsync(userId, xpResult.xp, _sConceptName, `tutor_${_strCls.toLowerCase()}`);
+                scheduleQualityBonusAsync(userId, query.trim(), tutorResult.followUpQuestion, _sConceptName, llmConfig);
+            }
+        });
+
         return true;
     }
 
@@ -765,7 +838,7 @@ async function handleStructured(res, ctx) {
                 };
                 await ChatHistory.findOneAndUpdate(
                     { sessionId, userId },
-                    { $push: { messages: { $each: [userMessageForDb, aiMessageForDb], $slice: -100 } } },
+                    { $push: { messages: { $each: buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting), $slice: -100 } } },
                     { upsert: true }
                 );
 
@@ -962,7 +1035,7 @@ async function handleStructured(res, ctx) {
     await ChatHistory.findOneAndUpdate(
         { sessionId, userId },
         {
-            $push: { messages: { $each: [userMessageForDb, aiMessageForDb], $slice: -100 } },
+            $push: { messages: { $each: buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting), $slice: -100 } },
             $set: { isTutorMode: true, tutorModeType: 'structured', courseName, updatedAt: new Date() }
         },
         { upsert: true }

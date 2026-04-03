@@ -122,6 +122,7 @@ function ChatHistory({ messages, onCueClick, onAnalyze }) {
                                 confidenceScore={msg.confidenceScore}
                                 historyVersions={msg.isBotGroup ? msg.versions : undefined}
                                 isError={msg.isError}
+                                xpDelta={msg.xpDelta}
                                 isLastAiMessage={
                                     groupedMessages.length > 0 &&
                                     groupedMessages[groupedMessages.length - 1].id === msg.id &&

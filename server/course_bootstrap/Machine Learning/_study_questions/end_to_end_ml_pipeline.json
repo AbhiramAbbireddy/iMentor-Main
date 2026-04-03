@@ -6,144 +6,119 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the first step in the end-to-end machine learning pipeline?",
+      "question": "Which of the following is the first step in an end-to-end machine learning pipeline?",
       "options": [
-        "A) Data preprocessing",
-        "B) Feature selection",
-        "C) Model training",
-        "D) Evaluation"
+        "A) Training the model",
+        "B) Gathering and preparing the data",
+        "C) Evaluating the model",
+        "D) Deploying the model"
       ],
-      "correct_option": "A",
-      "explanation": "Data preprocessing is the first step as it involves cleaning and transforming raw data into a format suitable for model training.",
+      "correct_option": "B",
+      "explanation": "The first step in an end-to-end machine learning pipeline is gathering and preparing the data, which is crucial for the success of the model.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is NOT a step in the machine learning pipeline?",
+      "question": "Which of the following is NOT typically included in the evaluation and testing phase of an ML pipeline?",
       "options": [
-        "A) Data collection",
-        "B) Data cleaning",
-        "C) Data visualization",
-        "D) Data augmentation"
+        "A) Cross-validation",
+        "B) Hyperparameter tuning",
+        "C) Confusion matrix",
+        "D) Feature extraction"
       ],
-      "correct_option": "C",
-      "explanation": "Data visualization is not a step in the machine learning pipeline but rather a tool used for understanding and presenting data.",
-      "difficulty": "beginner",
-      "bloom_level": "remember"
-    },
-    {
-      "id": "mcq_3",
-      "question": "In the context of machine learning, what does the term 'bias' refer to?",
-      "options": [
-        "A) A model's tendency to make incorrect predictions",
-        "B) A model's tendency to make consistent errors",
-        "C) A model's tendency to ignore outliers",
-        "D) A model's tendency to overfit the data"
-      ],
-      "correct_option": "B",
-      "explanation": "Bias refers to a model's tendency to make consistent errors, which can be due to oversimplification of the model.",
-      "difficulty": "intermediate",
-      "bloom_level": "understand"
-    },
-    {
-      "id": "mcq_4",
-      "question": "Which technique is commonly used to reduce variance in a machine learning model?",
-      "options": [
-        "A) Regularization",
-        "B) Cross-validation",
-        "C) Feature scaling",
-        "D) Data augmentation"
-      ],
-      "correct_option": "A",
-      "explanation": "Regularization is a technique used to reduce variance by adding a penalty to the loss function, which helps in preventing overfitting.",
+      "correct_option": "D",
+      "explanation": "Feature extraction is typically performed during the data preparation phase, not during evaluation and testing. Cross-validation, hyperparameter tuning, and confusion matrices are all part of the evaluation and testing phase.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
-      "id": "mcq_5",
-      "question": "What is the purpose of the cross-validation technique in the machine learning pipeline?",
+      "id": "mcq_3",
+      "question": "Which of the following best describes the role of continuous monitoring in the deployment phase of an ML pipeline?",
       "options": [
-        "A) To evaluate the model's performance on unseen data",
-        "B) To reduce the computational cost of training",
-        "C) To increase the size of the training dataset",
-        "D) To prevent overfitting by averaging model predictions"
+        "A) Ensuring the model's performance degrades gracefully",
+        "B) Updating the model with new data",
+        "C) Identifying and fixing bugs in the code",
+        "D) Ensuring the model remains effective over time"
       ],
       "correct_option": "D",
-      "explanation": "Cross-validation is used to prevent overfitting by averaging model predictions across different subsets of the data, providing a more reliable estimate of the model's performance.",
+      "explanation": "Continuous monitoring is crucial for ensuring the model remains effective over time, as it helps identify changes in the data distribution and performance degradation.",
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
+    },
+    {
+      "id": "mcq_4",
+      "question": "Which of the following is a key consideration when selecting a machine learning algorithm for a project?",
+      "options": [
+        "A) The complexity of the algorithm",
+        "B) The size of the data set",
+        "C) The availability of labeled data",
+        "D) The interpretability of the model"
+      ],
+      "correct_option": "D",
+      "explanation": "The interpretability of the model is a key consideration when selecting a machine learning algorithm, especially in applications where transparency is important.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
+    },
+    {
+      "id": "mcq_5",
+      "question": "Which of the following is a common technique used in feature extraction?",
+      "options": [
+        "A) Gradient descent",
+        "B) Regularization",
+        "C) Principal Component Analysis (PCA)",
+        "D) Cross-validation"
+      ],
+      "correct_option": "C",
+      "explanation": "Principal Component Analysis (PCA) is a common technique used in feature extraction to reduce the dimensionality of the data.",
+      "difficulty": "beginner",
+      "bloom_level": "remember"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Describe the role of data preprocessing in the machine learning pipeline.",
-      "model_answer": "Data preprocessing is crucial as it involves cleaning and transforming raw data into a format suitable for model training. This includes handling missing values, removing outliers, normalizing data, and encoding categorical variables. Proper preprocessing ensures that the data is consistent and accurate, which is essential for building effective machine learning models.",
+      "question": "Explain the importance of continuous monitoring in the deployment phase of an ML pipeline.",
+      "model_answer": "Continuous monitoring is crucial for ensuring the model remains effective over time. It helps identify changes in the data distribution, performance degradation, and other issues that could affect the model's performance. By regularly assessing the model's performance and making necessary adjustments, we can ensure the model continues to provide accurate predictions and insights.",
       "key_concepts": [
-        "data cleaning",
-        "feature scaling",
-        "encoding categorical variables"
+        "continuous monitoring",
+        "model performance",
+        "data distribution"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
-    },
-    {
-      "id": "sa_2",
-      "question": "Explain the difference between bias and variance in the context of machine learning.",
-      "model_answer": "Bias refers to the error introduced by approximating a real-world problem, which is inherently more complex, with a simplified model. High bias can cause the model to miss relevant relations between features and the target variable, leading to underfitting. Variance, on the other hand, is the error due to the model's sensitivity to small fluctuations in the training data. High variance can cause the model to fit the noise in the training data, leading to overfitting. Balancing bias and variance is crucial for building a model that generalizes well to unseen data.",
-      "key_concepts": [
-        "bias",
-        "variance",
-        "underfitting",
-        "overfitting"
-      ],
-      "difficulty": "intermediate",
-      "bloom_level": "analyze"
-    },
-    {
-      "id": "sa_3",
-      "question": "Discuss the importance of the evaluation step in the machine learning pipeline.",
-      "model_answer": "The evaluation step is crucial as it assesses the performance of the trained model on unseen data. This helps in determining whether the model is generalizing well or if it is overfitting to the training data. Evaluation metrics such as accuracy, precision, recall, and F1 score provide insights into the model's effectiveness. Additionally, evaluation helps in identifying potential issues and guiding further improvements in the model's architecture or training process.",
-      "key_concepts": [
-        "evaluation metrics",
-        "generalization",
-        "overfitting"
-      ],
-      "difficulty": "advanced",
-      "bloom_level": "evaluate"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
-      "front": "Bias",
-      "back": "Bias refers to the error introduced by approximating a real-world problem, which is inherently more complex, with a simplified model. High bias can cause the model to miss relevant relations between features and the target variable, leading to underfitting.",
-      "hint": "Think of bias as the model's tendency to make consistent errors."
+      "front": "Feature Extraction",
+      "back": "The process of selecting and transforming raw data into a more meaningful representation for use in machine learning models. Techniques include PCA, Fourier Transform, and feature scaling.",
+      "hint": "Think of it as cleaning and organizing your data."
     },
     {
       "id": "fc_2",
-      "front": "Variance",
-      "back": "Variance refers to the error due to the model's sensitivity to small fluctuations in the training data. High variance can cause the model to fit the noise in the training data, leading to overfitting.",
-      "hint": "Variance is the model's sensitivity to noise in the training data."
+      "front": "Training Set",
+      "back": "A subset of the data used to train the machine learning model. It is used to teach the model the patterns and relationships in the data.",
+      "hint": "The data the model learns from."
     },
     {
       "id": "fc_3",
-      "front": "Cross-validation",
-      "back": "Cross-validation is a technique used to prevent overfitting by averaging model predictions across different subsets of the data, providing a more reliable estimate of the model's performance.",
-      "hint": "Think of cross-validation as a way to simulate multiple training and testing processes."
+      "front": "Cross-Validation",
+      "back": "A technique used to assess the performance of a machine learning model by splitting the data into multiple subsets and training the model on different combinations of these subsets.",
+      "hint": "Ensures the model performs well on unseen data."
     },
     {
       "id": "fc_4",
-      "front": "Regularization",
-      "back": "Regularization is a technique used to reduce variance by adding a penalty to the loss function, which helps in preventing overfitting.",
-      "hint": "Regularization adds a constraint to the model to prevent it from becoming too complex."
+      "front": "Hyperparameter Tuning",
+      "back": "The process of selecting the best set of hyperparameters for a machine learning model to optimize its performance. This is typically done through techniques like grid search or random search.",
+      "hint": "Fine-tuning the model's settings."
     },
     {
       "id": "fc_5",
-      "front": "Feature Scaling",
-      "back": "Feature scaling involves transforming the features of the dataset to a standard scale, typically between 0 and 1 or -1 and 1, to ensure that no feature dominates the others due to its scale.",
-      "hint": "Feature scaling helps in ensuring that all features contribute equally to the model."
+      "front": "Confusion Matrix",
+      "back": "A table used to describe the performance of a classification model. It shows the number of true positives, true negatives, false positives, and false negatives.",
+      "hint": "A tool to evaluate classification models."
     }
   ],
   "topic_id": "course_wrap_up"

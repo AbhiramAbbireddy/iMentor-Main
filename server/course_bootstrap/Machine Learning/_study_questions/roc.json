@@ -6,143 +6,143 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What does ROC stand for?",
+      "question": "What does the point (0, 1) on an ROC curve represent?",
       "options": [
-        "A) Receiver Operating Characteristic",
-        "B) Random Operating Characteristic",
-        "C) Receiver Operation Characteristic",
-        "D) Receiver Operating Criteria"
+        "A) A classifier that always predicts the positive class",
+        "B) A classifier that always predicts the negative class",
+        "C) A classifier that has no information about the classes",
+        "D) A classifier that perfectly distinguishes between classes"
       ],
       "correct_option": "A",
-      "explanation": "ROC stands for Receiver Operating Characteristic, which is a plot of True Positive Rate (TPR) against False Positive Rate (FPR).",
+      "explanation": "A classifier that always predicts the positive class will have a true positive rate (TPR) of 1 and a false positive rate (FPR) of 0, which corresponds to the point (0, 1) on the ROC curve.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is NOT a metric used in ROC analysis?",
+      "question": "Which of the following best describes the area under the ROC curve (AUC)?",
       "options": [
-        "A) True Positive Rate (TPR)",
-        "B) True Negative Rate (TNR)",
-        "C) False Positive Rate (FPR)",
-        "D) Accuracy"
+        "A) The probability that a randomly chosen positive instance is ranked higher than a randomly chosen negative instance",
+        "B) The probability that a randomly chosen negative instance is ranked higher than a randomly chosen positive instance",
+        "C) The probability that a randomly chosen instance is correctly classified",
+        "D) The probability that a randomly chosen instance is misclassified"
       ],
-      "correct_option": "D",
-      "explanation": "Accuracy is a global metric that considers both true positives and true negatives, whereas ROC focuses on the trade-off between TPR and FPR.",
+      "correct_option": "A",
+      "explanation": "The AUC represents the probability that a randomly chosen positive instance is ranked higher than a randomly chosen negative instance, which is a measure of the classifier's overall performance.",
       "difficulty": "intermediate",
-      "bloom_level": "apply"
+      "bloom_level": "understand"
     },
     {
       "id": "mcq_3",
-      "question": "In an ROC curve, what does a point (0.5, 0.5) represent?",
+      "question": "What does the point (1, 0) on an ROC curve represent?",
       "options": [
-        "A) A perfect classifier",
-        "B) A random classifier",
-        "C) A classifier with no bias",
-        "D) A classifier with maximum bias"
+        "A) A classifier that always predicts the positive class",
+        "B) A classifier that always predicts the negative class",
+        "C) A classifier that has no information about the classes",
+        "D) A classifier that perfectly distinguishes between classes"
       ],
       "correct_option": "B",
-      "explanation": "A point (0.5, 0.5) on the ROC curve indicates that the classifier is making random guesses, which is equivalent to a random classifier.",
-      "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "explanation": "A classifier that always predicts the negative class will have a true positive rate (TPR) of 0 and a false positive rate (FPR) of 1, which corresponds to the point (1, 0) on the ROC curve.",
+      "difficulty": "beginner",
+      "bloom_level": "remember"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following is true about the area under the ROC curve (AUC-ROC)?",
+      "question": "If a classifier has an ROC curve that is a straight line from (0, 0) to (1, 1), what can we infer about its performance?",
       "options": [
-        "A) It ranges from 0 to 1.",
-        "B) It is always greater than 0.5.",
-        "C) It is the same as the accuracy.",
-        "D) It is the same as the F1 score."
+        "A) The classifier has perfect performance",
+        "B) The classifier has poor performance",
+        "C) The classifier has no information about the classes",
+        "D) The classifier has random guessing performance"
       ],
-      "correct_option": "A",
-      "explanation": "The AUC-ROC ranges from 0 to 1, where 1 indicates a perfect classifier and 0.5 indicates a random classifier.",
+      "correct_option": "D",
+      "explanation": "A straight line from (0, 0) to (1, 1) on the ROC curve indicates that the classifier performs no better than random guessing, as it has the same TPR and FPR at every threshold.",
       "difficulty": "intermediate",
-      "bloom_level": "apply"
+      "bloom_level": "understand"
     },
     {
       "id": "mcq_5",
-      "question": "What does the ROC curve illustrate?",
+      "question": "Which of the following statements is true regarding the AUC of a classifier?",
       "options": [
-        "A) The trade-off between precision and recall.",
-        "B) The trade-off between true positives and false positives.",
-        "C) The trade-off between true positives and true negatives.",
-        "D) The trade-off between accuracy and F1 score."
+        "A) An AUC of 1.0 indicates a perfect classifier",
+        "B) An AUC of 0.5 indicates a classifier that perfectly distinguishes between classes",
+        "C) An AUC of 0.5 indicates a classifier that performs no better than random guessing",
+        "D) An AUC of 0.0 indicates a perfect classifier"
       ],
-      "correct_option": "B",
-      "explanation": "The ROC curve illustrates the trade-off between True Positive Rate (TPR) and False Positive Rate (FPR) as the decision threshold is varied.",
-      "difficulty": "beginner",
-      "bloom_level": "understand"
+      "correct_option": "A",
+      "explanation": "An AUC of 1.0 indicates that the classifier has perfect performance, as it ranks all positive instances higher than all negative instances.",
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the significance of the AUC-ROC value of 0.5 in the context of a binary classifier.",
-      "model_answer": "An AUC-ROC value of 0.5 indicates that the classifier is performing no better than random guessing. This means that the classifier is equally likely to predict the positive class as the negative class, and it does not provide any useful information for distinguishing between the classes.",
+      "question": "Explain the significance of the point (0.5, 0.5) on an ROC curve.",
+      "model_answer": "The point (0.5, 0.5) on an ROC curve represents a classifier that has the same true positive rate and false positive rate at every threshold, indicating that it has no discriminatory power and performs no better than random guessing.",
       "key_concepts": [
-        "AUC-ROC",
-        "random classifier"
+        "ROC curve",
+        "AUC",
+        "random guessing"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "How does the ROC curve help in evaluating the performance of a classifier?",
-      "model_answer": "The ROC curve helps in evaluating the performance of a classifier by showing the trade-off between True Positive Rate (TPR) and False Positive Rate (FPR) at different decision thresholds. It provides a visual representation of the classifier's ability to distinguish between positive and negative classes, allowing us to choose an optimal threshold based on the specific requirements of the application.",
+      "question": "Compare and contrast the ROC curve and the precision-recall curve.",
+      "model_answer": "The ROC curve and the precision-recall curve are both tools for evaluating the performance of binary classifiers, but they focus on different aspects. The ROC curve emphasizes the trade-off between true positive rate and false positive rate, while the precision-recall curve focuses on the trade-off between precision and recall. The ROC curve is more suitable for imbalanced datasets, as it shows the performance at all thresholds, whereas the precision-recall curve is more useful for evaluating the classifier's ability to find relevant instances.",
       "key_concepts": [
         "ROC curve",
-        "TPR",
-        "FPR",
-        "decision threshold"
+        "precision-recall curve",
+        "imbalanced datasets"
       ],
       "difficulty": "advanced",
       "bloom_level": "analyze"
     },
     {
       "id": "sa_3",
-      "question": "Compare and contrast the AUC-ROC and accuracy of a classifier.",
-      "model_answer": "Accuracy measures the proportion of correct predictions out of all predictions, whereas AUC-ROC measures the ability of the classifier to rank positive instances higher than negative instances. Accuracy is a global metric that depends on the class distribution, while AUC-ROC is a more robust metric that evaluates the classifier's performance across all possible thresholds. A high accuracy does not necessarily imply a high AUC-ROC, and vice versa.",
+      "question": "Design a scenario where the ROC curve would be more informative than the AUC.",
+      "model_answer": "In a scenario where the classifier's performance needs to be evaluated at different thresholds, the ROC curve would be more informative than the AUC. For example, in medical diagnosis, a doctor might want to know the classifier's performance at various thresholds to choose the optimal threshold for diagnosing a disease. The ROC curve provides a visual representation of the classifier's performance at all thresholds, which is more informative than the single number AUC.",
       "key_concepts": [
-        "AUC-ROC",
-        "accuracy",
-        "class distribution"
+        "ROC curve",
+        "AUC",
+        "threshold selection"
       ],
       "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "bloom_level": "create"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
-      "front": "ROC",
-      "back": "Receiver Operating Characteristic; a plot of True Positive Rate (TPR) against False Positive Rate (FPR) at various threshold settings.",
-      "hint": "Think of it as a trade-off curve."
+      "front": "ROC curve",
+      "back": "A graphical plot of the true positive rate (TPR) against the false positive rate (FPR) at various threshold settings. It helps in understanding the trade-off between sensitivity and specificity.",
+      "hint": "Think of it as a map showing the classifier's performance."
     },
     {
       "id": "fc_2",
-      "front": "AUC-ROC",
-      "back": "Area Under the ROC Curve; a single scalar value summarizing the overall performance of a classifier in distinguishing between positive and negative classes.",
-      "hint": "Ranges from 0 to 1."
+      "front": "AUC (Area Under the ROC Curve)",
+      "back": "A single number that summarizes the overall performance of a classifier. It is the area under the ROC curve, ranging from 0.5 (random guessing) to 1.0 (perfect classifier).",
+      "hint": "It's like the overall grade for the classifier's performance."
     },
     {
       "id": "fc_3",
       "front": "True Positive Rate (TPR)",
-      "back": "Sensitivity; the proportion of actual positive cases that are correctly identified as positive.",
-      "hint": "TPR = TP / (TP + FN)"
+      "back": "The ratio of true positive predictions to the total number of actual positive instances. It is also known as sensitivity or recall. $TPR = \frac{TP}{TP + FN}$",
+      "hint": "It measures how well the classifier identifies positive instances."
     },
     {
       "id": "fc_4",
       "front": "False Positive Rate (FPR)",
-      "back": "1 - Specificity; the proportion of actual negative cases that are incorrectly identified as positive.",
-      "hint": "FPR = FP / (FP + TN)"
+      "back": "The ratio of false positive predictions to the total number of actual negative instances. $FPR = \frac{FP}{FP + TN}$",
+      "hint": "It measures how often the classifier incorrectly identifies negative instances as positive."
     },
     {
       "id": "fc_5",
       "front": "Threshold",
-      "back": "The decision point in a classifier's output that separates positive from negative predictions; changing the threshold alters the ROC curve.",
-      "hint": "Adjusts TPR and FPR."
+      "back": "A decision boundary that separates the predicted positive and negative classes. Changing the threshold can alter the TPR and FPR, providing different points on the ROC curve.",
+      "hint": "It's like the line in a game that decides who wins."
     }
   ],
   "topic_id": "performance_metrics"

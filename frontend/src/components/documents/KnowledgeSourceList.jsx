@@ -28,7 +28,7 @@ const formatRelativeTime = (dateString) => {
     }
 };
 
-function KnowledgeSourceList({ onSelectSource, selectedSource, onRefreshNeeded }) {
+function KnowledgeSourceList({ onSelectSource, selectedSource, onRefreshNeeded, showSubjects = false }) {
     const [sources, setSources] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -40,8 +40,31 @@ function KnowledgeSourceList({ onSelectSource, selectedSource, onRefreshNeeded }
         try {
             const response = await api.getKnowledgeSources();
             const fetchedSources = Array.isArray(response) ? response : [];
-            const userOnlySources = fetchedSources.filter(source => source.sourceType !== 'subject');
-            setSources(userOnlySources)
+            let resultSources = showSubjects 
+                ? fetchedSources 
+                : fetchedSources.filter(source => source.sourceType !== 'subject');
+
+            if (showSubjects) {
+                try {
+                    const subjectsData = await api.getSubjects();
+                    if (subjectsData && Array.isArray(subjectsData.subjects)) {
+                        const dynamicSubjects = subjectsData.subjects.map((sub, index) => ({
+                            _id: `dynamic_subject_${index}_${sub}`,
+                            title: sub,
+                            sourceType: 'subject',
+                            status: 'completed',
+                            createdAt: new Date().toISOString()
+                        }));
+                        const existingTitles = new Set(resultSources.map(s => s.title));
+                        const uniqueDynamic = dynamicSubjects.filter(ds => !existingTitles.has(ds.title));
+                        resultSources = [...uniqueDynamic, ...resultSources];
+                    }
+                } catch (subErr) {
+                    console.warn("Failed to fetch dynamic subjects for KB list", subErr);
+                }
+            }
+
+            setSources(resultSources);
             // Check if there are any sources still processing to decide if we need to continue polling.
             const stillProcessing = fetchedSources.some(s => s.status && s.status.startsWith('processing'));
             
@@ -154,7 +177,7 @@ function KnowledgeSourceList({ onSelectSource, selectedSource, onRefreshNeeded }
                 return (
                     <div
                         key={source._id}
-                        onClick={() => isSelectable && onSelectSource(isSelected ? null : source.title)}
+                        onClick={() => isSelectable && onSelectSource(isSelected ? null : source.title, source.sourceType)}
                         className={`p-2.5 bg-surface-light dark:bg-gray-800 border rounded-md flex items-center justify-between transition-all duration-150
                                     ${isSelectable ? 'cursor-pointer hover:shadow-md' : 'cursor-default opacity-80'}
                                     ${isSelected ? 'ring-2 ring-primary dark:ring-primary-light shadow-lg border-primary dark:border-primary-light' : 'border-border-light dark:border-border-dark'}`}

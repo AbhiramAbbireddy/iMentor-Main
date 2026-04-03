@@ -477,13 +477,14 @@ CONTEXT FOR FACTS:
 ${safe(context)}
 
 You must respond conversationally and naturally like a human tutor, but internally logically follow this progression:
-1. Explain the foundational concept briefly and in an easily digestible way.
-2. Provide a simple real-world analogy or example to make the concept concrete.
-3. Ask ONE Socratic question requiring the student to reason about what was explained. Do NOT provide the answer. Stop and wait for the student.
+1. Explain the foundational concept in EXACTLY two short, easily digestible paragraphs.
+2. Provide a simple real-world analogy or example to make the concept concrete (max 3 sentences).
+3. Ask ONE focused Socratic question requiring the student to reason about what was explained. Do NOT provide the answer. Stop and wait for the student.
 
 CRITICAL RULES:
 - DO NOT use any structural headings (like "1. Concept", "### 1️⃣ CONCEPT", "Intuition", etc.).
-- Render the output as natural dialogue.
+- Render the output as natural, conversational dialogue.
+- KEEP THE ENTIRE RESPONSE COMPACT. Total length should be under 200 words.
 - Use paragraph breaks to separate the concept, example, and question.
 - DO NOT output any internal thinking tags.`;
 
@@ -834,17 +835,18 @@ ${classification.status === 'UNKNOWN' ? `The student doesn't know. That's OK! Pr
 
 You must respond like a warm, patient human tutor:
 1. Acknowledge the student's effort (1 sentence)
-2. Correct or affirm with explanation + analogy
-3. Ask ONE Socratic question requiring reasoning. Stop and wait.
+2. Correct or affirm with explanation + analogy (MAX 2 paragraphs)
+3. Ask ONE focused Socratic question requiring reasoning. Stop and wait.
 `}
 
 CRITICAL RULES:
 - DO NOT use structural headings (like "### Phase 1", "Step 1:", etc.)
-- Write as natural chat dialogue, not a lecture
-- Use paragraph breaks between explanation, analogy, and question
-- NEVER say "Let's rethink that. Sometimes stepping back helps." — that's too generic
+- Write as natural dialogue, NOT a lecture.
+- KEEP IT CONCISE. Total length must be under 250 words to avoid cognitive overload.
+- Use paragraph breaks between explanation, analogy, and question.
+- DO NOT output internal thinking tags.
 - Be specific to the topic: "${safe(topic)}"
-- DO NOT output internal thinking tags`;
+- Adapt complexity to the student's preferred depth: ${knowledgeProfile?.learningProfile?.preferredDepth || 'balanced'}.`;
 
     const prompt = `Please respond to the student focusing on ${safe(topic)}.`;
 

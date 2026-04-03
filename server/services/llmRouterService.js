@@ -1,4 +1,5 @@
-const log = require('../utils/logger');
+const log         = require('../utils/logger');
+const sglangCaps  = require('./sglangCapabilities');
 const LLMConfiguration = require('../models/LLMConfiguration');
 const CourseAdapterMapping = require('../models/CourseAdapterMapping');
 const User = require('../models/User');
@@ -422,7 +423,7 @@ const LLMRouter = {
           // Dynamic token calculation for SGLang to prevent context overflow
           const allText = chatHistory.map(m => m.content).join(' ') + query + (systemPrompt || '');
           const estimatedInputTokens = Math.ceil(allText.length / 4);
-          const modelMaxContext = 8192;
+          const modelMaxContext = sglangCaps.getModelMaxContext(); // live from /v1/models
           const safetyBuffer = 200;
           const availableForCompletion = Math.max(512, modelMaxContext - estimatedInputTokens - safetyBuffer);
           const adjustedMaxTokens = Math.min(llmOptions.maxOutputTokens || 4096, availableForCompletion);

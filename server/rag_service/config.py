@@ -137,6 +137,10 @@ SGLANG_HEAVY_URL    = os.getenv('SGLANG_HEAVY_URL', 'http://localhost:8000/v1')
 SGLANG_HEAVY_MODEL  = os.getenv('SGLANG_HEAVY_MODEL', 'Qwen/Qwen2.5-7B-Instruct-AWQ')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None  # Treat empty string as unset
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+# Groq — fast cloud LLM for fallback generation (lecture notes, study Qs, etc.)
+GROQ_API_KEY   = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL_NAME = os.getenv('GROQ_MODEL_NAME', 'llama-3.3-70b-versatile')
 # ─── Ollama REMOVED — All LLM inference uses SGLang ────────────────────────
 # Legacy variables kept as empty/disabled for backward compatibility
 OLLAMA_BASE_URL = ''  # Ollama removed — use SGLANG_HEAVY_URL instead

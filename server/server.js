@@ -45,6 +45,7 @@ const uploadRoutes = require("./routes/upload");
 const analysisRoutes = require("./routes/analysis");
 const adminMasterRouter = require('./routes/index');
 const subjectsRoutes = require("./routes/subjects");
+const coursesRoutes = require("./routes/courses");
 const generationRoutes = require("./routes/generationRoutes");
 const exportRoutes = require("./routes/export");
 const kgRoutes = require("./routes/kg");
@@ -61,6 +62,7 @@ const knowledgeStateRoutes = require('./routes/knowledgeState');
 const filesRoutes = require('./routes/files');
 const researchRoutes = require('./routes/research');
 const debugRoutes = require('./routes/debug');
+const guestChatRoutes = require('./routes/guestChat');
 const deepResearchRoutes = require('./routes/deepResearch'); // [Team1-6] Deep research
 const tutorRoutes = require('./routes/tutor'); // [Team1-6] Socratic tutor
 const socraticRoutes = require('./routes/socratic'); // [Team1-6] Socratic sessions
@@ -233,6 +235,7 @@ app.get('/metrics', async (req, res) => {
 // --- Public Routes (No Authentication Required) ---
 app.use("/api/network", networkRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/guest", guestChatRoutes);
 
 // --- Admin Routes (Uses its own adminAuthMiddleware) ---
 app.use('/api/admin/analytics', adminAuthMiddleware, analyticsRoutes);
@@ -248,6 +251,7 @@ app.use("/api/upload", authMiddleware, uploadRoutes);
 app.use("/api/files", authMiddleware, filesRoutes);
 app.use("/api/analysis", authMiddleware, analysisRoutes);
 app.use("/api/subjects", authMiddleware, subjectsRoutes);
+app.use("/api/courses", authMiddleware, coursesRoutes);
 app.use("/api/generate", authMiddleware, generationRoutes);
 app.use("/api/export", authMiddleware, exportRoutes);
 app.use("/api/kg", authMiddleware, kgRoutes);

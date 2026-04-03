@@ -6,71 +6,71 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the primary assumption made by Naive Bayes?",
+      "question": "What is the primary assumption made by the Naive Bayes classifier?",
       "options": [
-        "A) Features are independent.",
-        "B) Features are dependent.",
-        "C) All features have equal weight.",
-        "D) The model is non-probabilistic."
+        "A) Features are dependent on each other.",
+        "B) Features are independent of each other.",
+        "C) Prior probabilities are equal for all classes.",
+        "D) Likelihood of features is uniform across classes."
       ],
-      "correct_option": "A",
-      "explanation": "The primary assumption of Naive Bayes is that the features are independent. This simplifies the calculations and often leads to good performance.",
+      "correct_option": "B",
+      "explanation": "The primary assumption of Naive Bayes is that the features are independent of each other, which simplifies the calculations.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is a key advantage of using Naive Bayes?",
+      "question": "Which of the following best describes the posterior probability in the context of Naive Bayes?",
       "options": [
-        "A) It requires a large dataset.",
-        "B) It is computationally expensive.",
-        "C) It is simple and efficient.",
-        "D) It guarantees accurate predictions."
+        "A) The probability of the class given the features.",
+        "B) The probability of the features given the class.",
+        "C) The probability of the class without considering the features.",
+        "D) The probability of the features without considering the class."
       ],
-      "correct_option": "C",
-      "explanation": "Naive Bayes is simple and efficient, making it easy to implement and often outperforming more complex models in practice.",
-      "difficulty": "beginner",
-      "bloom_level": "remember"
+      "correct_option": "A",
+      "explanation": "The posterior probability in Naive Bayes is the probability of the class given the features, which is calculated using Bayes' theorem.",
+      "difficulty": "intermediate",
+      "bloom_level": "understand"
     },
     {
       "id": "mcq_3",
-      "question": "In the context of spam filtering, which feature would likely be considered in a Naive Bayes classifier?",
+      "question": "In the context of Naive Bayes, what does the term 'likelihood' refer to?",
       "options": [
-        "A) The length of the email.",
-        "B) The color of the email.",
-        "C) The presence of a link.",
-        "D) The sender's email address."
+        "A) The probability of the class.",
+        "B) The probability of the features.",
+        "C) The probability of the class given the features.",
+        "D) The probability of the features given the class."
       ],
-      "correct_option": "C",
-      "explanation": "The presence of a link is a common feature used in spam filtering. Naive Bayes can use this feature to predict the likelihood of an email being spam.",
+      "correct_option": "D",
+      "explanation": "The likelihood in Naive Bayes refers to the probability of the features given the class, which is a key component in calculating the posterior probability.",
       "difficulty": "intermediate",
-      "bloom_level": "apply"
+      "bloom_level": "understand"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following scenarios would likely violate the independence assumption of Naive Bayes?",
+      "question": "Which of the following scenarios is most suitable for using a Naive Bayes classifier?",
       "options": [
-        "A) Predicting the weather based on temperature and humidity.",
-        "B) Classifying emails based on the presence of certain keywords.",
-        "C) Identifying spam based on the frequency of certain characters.",
-        "D) Detecting fraud based on transaction amounts and times."
+        "A) When the features are highly correlated.",
+        "B) When the features are independent and the dataset is large.",
+        "C) When the dataset is small and the features are dependent.",
+        "D) When the features are continuous and the dataset is small."
       ],
-      "correct_option": "A",
-      "explanation": "Predicting the weather based on temperature and humidity would likely violate the independence assumption because these features are often correlated.",
-      "difficulty": "intermediate",
+      "correct_option": "B",
+      "explanation": "Naive Bayes is most suitable when the features are independent and the dataset is large, as it simplifies the calculations and is efficient.",
+      "difficulty": "advanced",
       "bloom_level": "apply"
     },
     {
       "id": "mcq_5",
-      "question": "Which of the following is a limitation of Naive Bayes?",
+      "question": "What is the main advantage of using a Naive Bayes classifier in text classification?",
       "options": [
-        "A) It cannot handle categorical data.",
-        "B) It assumes all features are independent, which is often not the case.",
-        "C) It is too complex to implement.",
-        "D) It requires extensive training data."
+        "A) It requires complex feature engineering.",
+        "B) It can handle large datasets efficiently.",
+        "C) It guarantees 100% accuracy.",
+        "D) It is computationally expensive."
       ],
       "correct_option": "B",
-      "explanation": "The main limitation of Naive Bayes is that it assumes all features are independent, which is often not the case in real-world data.",
+      "explanation": "The main advantage of using a Naive Bayes classifier in text classification is that it can handle large datasets efficiently, making it a practical choice for such tasks.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
     }
@@ -78,72 +78,71 @@
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain how the Naive Bayes classifier works in a spam filter.",
-      "model_answer": "The Naive Bayes classifier works by calculating the probability of an email being spam based on the presence of certain features, such as the presence of a link, special characters, and high word count. It assumes that these features are independent and uses Bayes' theorem to update the probability of the email being spam. If the probability exceeds a certain threshold, the email is classified as spam.",
+      "question": "Explain the role of the prior probability in the Naive Bayes classifier.",
+      "model_answer": "The prior probability in the Naive Bayes classifier represents the probability of each class before considering the features. It is a crucial component in calculating the posterior probability, which is the probability of the class given the features. The prior probability is used to weight the likelihood of the features given the class, ultimately influencing the final prediction.",
       "key_concepts": [
-        "Naive Bayes",
-        "Bayes' theorem",
-        "spam filtering",
-        "independent features"
+        "prior probability",
+        "posterior probability",
+        "Bayes' theorem"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Discuss the implications of the independence assumption in Naive Bayes.",
-      "model_answer": "The independence assumption in Naive Bayes simplifies the model, making it computationally efficient. However, it often leads to inaccurate predictions because real-world data is rarely independent. Despite this, Naive Bayes often performs well in practice, suggesting that the assumption is often a good approximation in many cases.",
+      "question": "Compare and contrast the Naive Bayes classifier with a logistic regression model.",
+      "model_answer": "Both Naive Bayes and logistic regression are used for classification tasks, but they differ in their assumptions and approach. Naive Bayes assumes that the features are independent, while logistic regression does not make this assumption. Additionally, Naive Bayes is a probabilistic model that estimates the posterior probability of each class, whereas logistic regression models the log-odds of the class. Naive Bayes is often simpler and faster to implement, especially for large datasets, while logistic regression can handle more complex relationships between features and classes.",
       "key_concepts": [
         "independence assumption",
-        "computational efficiency",
-        "real-world data"
+        "posterior probability",
+        "log-odds"
       ],
       "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "bloom_level": "analyze"
     },
     {
       "id": "sa_3",
-      "question": "How does the Naive Bayes classifier handle categorical data?",
-      "model_answer": "Naive Bayes can handle categorical data by treating each category as a separate feature. For example, in spam filtering, the presence of certain keywords can be treated as categorical data. The classifier calculates the probability of each category being present in spam emails and uses these probabilities to make predictions.",
+      "question": "Discuss the limitations of the Naive Bayes classifier and suggest ways to mitigate them.",
+      "model_answer": "The main limitation of the Naive Bayes classifier is the assumption of feature independence, which may not hold in real-world scenarios. This can lead to poor performance when the features are actually correlated. To mitigate this, one can use more sophisticated models that do not make the independence assumption, such as Gaussian Naive Bayes or Bernoulli Naive Bayes. Another approach is to use feature selection techniques to identify the most relevant features, or to incorporate domain knowledge to adjust the feature independence assumption. Additionally, cross-validation can be used to ensure that the model generalizes well to unseen data.",
       "key_concepts": [
-        "categorical data",
-        "feature treatment",
-        "spam filtering"
+        "feature independence",
+        "cross-validation",
+        "feature selection"
       ],
-      "difficulty": "beginner",
-      "bloom_level": "understand"
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
-      "front": "Naive Bayes",
-      "back": "A simple probabilistic classifier that assumes independence between features. It uses Bayes' theorem to predict the probability of each class.",
+      "front": "Naive Bayes Classifier",
+      "back": "A simple probabilistic classifier that assumes feature independence. It calculates the posterior probability of a class given the features using Bayes' theorem. Posterior probability = (Likelihood * Prior) / Evidence",
       "hint": "Think of it as a simplified Bayesian classifier."
     },
     {
       "id": "fc_2",
-      "front": "Bayes' Theorem",
-      "back": "$P(A|B) = \\frac{P(B|A) \\cdot P(A)}{P(B)}$ - The probability of A given B is proportional to the probability of B given A, times the prior probability of A, divided by the probability of B.",
-      "hint": "Remember the structure: Probability of A given B."
+      "front": "Likelihood",
+      "back": "The probability of the features given the class. In Naive Bayes, it is the product of the probabilities of each feature given the class, assuming independence. Likelihood = P(X|C)",
+      "hint": "It's the probability of the evidence given the class."
     },
     {
       "id": "fc_3",
-      "front": "Feature Independence",
-      "back": "The assumption that the presence of one feature does not affect the probability of another feature being present. This simplifies the calculations in Naive Bayes.",
-      "hint": "Think of it as each feature being unrelated to the others."
+      "front": "Prior Probability",
+      "back": "The probability of the class before considering the features. It is used to weight the likelihood of the features. Prior = P(C)",
+      "hint": "It's the base probability of the class."
     },
     {
       "id": "fc_4",
-      "front": "Spam Filtering",
-      "back": "A common application of Naive Bayes where emails are classified as spam or not spam based on certain features such as the presence of links, special characters, and word count.",
-      "hint": "Consider emails with suspicious content."
+      "front": "Posterior Probability",
+      "back": "The probability of the class given the features. It is calculated using Bayes' theorem. Posterior = (Likelihood * Prior) / Evidence",
+      "hint": "It's the updated probability of the class."
     },
     {
       "id": "fc_5",
-      "front": "Sentiment Analysis",
-      "back": "Another application of Naive Bayes where text is classified based on sentiment (positive, negative, neutral) using features such as word choice and tone.",
-      "hint": "Analyze text for emotional content."
+      "front": "Independence Assumption",
+      "back": "The assumption that the features are independent of each other. This simplifies the calculations in Naive Bayes. P(X1, X2, ..., Xn|C) = P(X1|C) * P(X2|C) * ... * P(Xn|C)",
+      "hint": "It's the key simplifying assumption."
     }
   ],
   "topic_id": "bayesian_classifier"

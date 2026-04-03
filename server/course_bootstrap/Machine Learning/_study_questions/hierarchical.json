@@ -6,71 +6,71 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the initial step in agglomerative hierarchical clustering?",
+      "question": "What is the primary purpose of a dendrogram in hierarchical clustering?",
       "options": [
-        "A) Merging the two closest clusters",
-        "B) Splitting the largest cluster",
-        "C) Assigning each point to its own cluster",
-        "D) Identifying the most distant points"
+        "A) To visualize the hierarchy of clusters.",
+        "B) To calculate the distance between clusters.",
+        "C) To identify the number of clusters.",
+        "D) To determine the optimal number of features."
       ],
       "correct_option": "A",
-      "explanation": "In agglomerative clustering, we start by considering each point as an individual cluster and then repeatedly merge the two closest clusters until all points are in a single cluster.",
+      "explanation": "A dendrogram is a tree-like diagram that shows the hierarchical relationship between clusters. It is used to visualize the clustering process and the resulting groups.",
       "difficulty": "beginner",
-      "bloom_level": "remember"
+      "bloom_level": "understand"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following best describes divisive hierarchical clustering?",
+      "question": "Which linkage criterion is most likely to produce a dendrogram with many small clusters?",
       "options": [
-        "A) Starting with all points in a single cluster and recursively splitting",
-        "B) Starting with each point as an individual cluster and merging",
-        "C) Starting with a random cluster and expanding",
-        "D) Starting with the most distant points and merging"
+        "A) Complete linkage",
+        "B) Average linkage",
+        "C) Single linkage",
+        "D) Centroid linkage"
       ],
-      "correct_option": "A",
-      "explanation": "Divisive clustering begins with all points in a single cluster and recursively splits the clusters until each point is in its own cluster.",
-      "difficulty": "beginner",
-      "bloom_level": "remember"
+      "correct_option": "C",
+      "explanation": "Single linkage tends to produce a dendrogram with many small clusters because it only considers the distance between the closest points in each cluster, leading to rapid merging of clusters.",
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_3",
-      "question": "Which type of hierarchical clustering is more computationally efficient for large datasets?",
+      "question": "In hierarchical clustering, what does the distance between two clusters represent?",
       "options": [
-        "A) Agglomerative",
-        "B) Divisive",
-        "C) Both are equally efficient",
-        "D) Neither is suitable for large datasets"
+        "A) The average distance between all points in the two clusters.",
+        "B) The maximum distance between any two points in the two clusters.",
+        "C) The minimum distance between any two points in the two clusters.",
+        "D) The sum of distances between all points in the two clusters."
       ],
-      "correct_option": "A",
-      "explanation": "Agglomerative clustering is generally more computationally efficient for large datasets because it starts with individual points and merges them, which is less complex than starting with a single cluster and splitting it recursively.",
+      "correct_option": "B",
+      "explanation": "The distance between two clusters in hierarchical clustering is often the maximum distance between any two points in the two clusters, which is known as complete linkage.",
       "difficulty": "intermediate",
-      "bloom_level": "apply"
+      "bloom_level": "understand"
     },
     {
       "id": "mcq_4",
-      "question": "What is the primary advantage of hierarchical clustering?",
+      "question": "Which of the following is NOT a common linkage criterion used in hierarchical clustering?",
       "options": [
-        "A) It requires the number of clusters to be specified in advance",
-        "B) It can be used only for numerical data",
-        "C) It provides a tree-like structure that can be visualized as a dendrogram",
-        "D) It is faster than other clustering methods"
+        "A) Single linkage",
+        "B) Complete linkage",
+        "C) Centroid linkage",
+        "D) K-means linkage"
       ],
-      "correct_option": "C",
-      "explanation": "Hierarchical clustering provides a tree-like structure that can be visualized as a dendrogram, making it easy to understand the relationships between clusters without specifying the number of clusters in advance.",
-      "difficulty": "intermediate",
-      "bloom_level": "apply"
+      "correct_option": "D",
+      "explanation": "K-means is a clustering algorithm that does not use hierarchical clustering methods. Single, complete, and centroid linkages are all common in hierarchical clustering.",
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
     },
     {
       "id": "mcq_5",
-      "question": "Which metric is commonly used to determine the distance between clusters in hierarchical clustering?",
+      "question": "How does the choice of distance metric affect hierarchical clustering?",
       "options": [
-        "A) Jaccard index",
-        "B) Cosine similarity",
-        "C) Euclidean distance",
-        "D) Pearson correlation"
+        "A) It does not affect the clustering process.",
+        "B) It only affects the visualization of the dendrogram.",
+        "C) It can significantly alter the clustering outcome.",
+        "D) It only affects the computational complexity of the algorithm."
       ],
       "correct_option": "C",
-      "explanation": "Euclidean distance is commonly used to determine the distance between clusters in hierarchical clustering, as it measures the straight-line distance between points in multi-dimensional space.",
+      "explanation": "The choice of distance metric can significantly alter the clustering outcome because it determines how points are compared and grouped. Different metrics can lead to different dendrograms and, consequently, different clusters.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
     }
@@ -78,69 +78,47 @@
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the difference between agglomerative and divisive hierarchical clustering.",
-      "model_answer": "Agglomerative clustering starts with each point as an individual cluster and repeatedly merges the two closest clusters until all points are in a single cluster. Divisive clustering starts with all points in a single cluster and recursively splits the clusters until each point is in its own cluster. The main difference is the direction of the process: agglomerative builds up from individual points, while divisive breaks down from a single cluster.",
+      "question": "Explain how hierarchical clustering can be used in marketing for customer segmentation.",
+      "model_answer": "Hierarchical clustering can be used in marketing to segment customers into distinct groups based on their purchasing behavior, preferences, or demographic characteristics. By analyzing customer data, such as purchase history, demographic information, and online behavior, marketers can identify natural groupings that share similar traits. These segments can then be targeted with specific marketing strategies, allowing for more personalized and effective marketing campaigns.",
       "key_concepts": [
-        "agglomerative clustering",
-        "divisive clustering"
+        "customer segmentation",
+        "hierarchical clustering",
+        "data analysis"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
-    },
-    {
-      "id": "sa_2",
-      "question": "Describe the role of a dendrogram in hierarchical clustering.",
-      "model_answer": "A dendrogram is a tree-like diagram that records the sequence of merges in hierarchical clustering. It provides a visual representation of the hierarchical structure of clusters, making it easy to understand the relationships between clusters at different levels of granularity. Each vertical line in the dendrogram represents a cluster, and the height of the line indicates the distance between clusters.",
-      "key_concepts": [
-        "dendrogram",
-        "hierarchical clustering"
-      ],
-      "difficulty": "advanced",
-      "bloom_level": "explain why"
-    },
-    {
-      "id": "sa_3",
-      "question": "Discuss the advantages and disadvantages of hierarchical clustering.",
-      "model_answer": "Advantages of hierarchical clustering include its ability to provide a tree-like structure that can be visualized as a dendrogram, making it easy to understand the relationships between clusters without specifying the number of clusters in advance. It is also useful for exploring different levels of granularity in the data. However, hierarchical clustering can be computationally expensive for large datasets, and the choice of distance metric can significantly affect the results. Additionally, the method can be sensitive to outliers and may not perform well with non-hierarchical data structures.",
-      "key_concepts": [
-        "advantages",
-        "disadvantages",
-        "hierarchical clustering"
-      ],
-      "difficulty": "advanced",
-      "bloom_level": "critique"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "Hierarchical Clustering",
-      "back": "A method for forming a hierarchy of clusters by either merging (agglomerative) or splitting (divisive) clusters. It builds a tree-like structure (dendrogram) that records the sequence of merges or splits.",
-      "hint": "Think of a tree growing from a single root."
+      "back": "A method for forming a hierarchy of clusters by recursively merging or splitting clusters based on their similarity. The process can be visualized as a dendrogram.",
+      "hint": "Think of a tree with branches."
     },
     {
       "id": "fc_2",
       "front": "Dendrogram",
-      "back": "A tree-like diagram that records the sequence of merges or splits in hierarchical clustering. Each vertical line represents a cluster, and the height of the line indicates the distance between clusters.",
-      "hint": "Visualize a family tree."
+      "back": "A tree-like diagram that shows the hierarchical relationship between clusters in hierarchical clustering. Each branch represents a cluster, and the height of the branch indicates the distance between clusters.",
+      "hint": "Visual representation of clustering."
     },
     {
       "id": "fc_3",
-      "front": "Euclidean Distance",
-      "back": "A metric used to determine the distance between clusters in hierarchical clustering. It measures the straight-line distance between points in multi-dimensional space.",
-      "hint": "Think of the shortest path between two points."
+      "front": "Linkage Criteria",
+      "back": "Rules for determining the distance between clusters in hierarchical clustering. Common criteria include single linkage (minimum distance), complete linkage (maximum distance), and average linkage (mean distance).",
+      "hint": "How to measure cluster similarity."
     },
     {
       "id": "fc_4",
-      "front": "Agglomerative Clustering",
-      "back": "A type of hierarchical clustering that starts with each point as an individual cluster and repeatedly merges the two closest clusters until all points are in a single cluster.",
-      "hint": "Bottom-up approach."
+      "front": "Distance Metric",
+      "back": "A function that defines the distance between two points or clusters in a dataset. Common metrics include Euclidean distance, Manhattan distance, and cosine similarity.",
+      "hint": "Measure of dissimilarity."
     },
     {
       "id": "fc_5",
-      "front": "Divisive Clustering",
-      "back": "A type of hierarchical clustering that starts with all points in a single cluster and recursively splits the clusters until each point is in its own cluster.",
-      "hint": "Top-down approach."
+      "front": "Hierarchical Agglomerative Clustering (HAC)",
+      "back": "A type of hierarchical clustering that starts with each data point as a separate cluster and then merges the closest pairs of clusters iteratively until a single cluster remains.",
+      "hint": "Bottom-up approach to clustering."
     }
   ],
   "topic_id": "clustering"

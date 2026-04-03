@@ -18,47 +18,47 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ── VS Code Dark Mode shell palette ─────────────────────────────────
+        // ── VS Code Dark Mode shell palette (executive) ──────────────────────
         // Named to match VS Code source tokens — colorblind-safe (gray-only shell).
-        'vs-bg':        '#1e1e1e',   // editor canvas
-        'vs-sidebar':   '#252526',   // sidebar / activity bar bg
-        'vs-panel':     '#2d2d2d',   // terminal / bottom panel
-        'vs-surface':   '#333333',   // card / raised surface
-        'vs-surface-hi':'#3a3a3a',   // hover state on cards
-        'vs-border':    '#3c3c3c',   // default border
-        'vs-border-hi': '#505050',   // focused / active border
-        'vs-text':      '#cccccc',   // primary text
-        'vs-text-lo':   '#999999',   // secondary text
-        'vs-text-dim':  '#666666',   // placeholders, disabled
+        'vs-bg':        '#121212',   // editor canvas
+        'vs-sidebar':   '#1a1a1a',   // sidebar / activity bar bg
+        'vs-panel':     '#1e1e1e',   // terminal / bottom panel
+        'vs-surface':   '#242424',   // card / raised surface
+        'vs-surface-hi':'#2e2e2e',   // hover state on cards
+        'vs-border':    '#4a4a4a',   // default border
+        'vs-border-hi': '#666666',   // focused / active border
+        'vs-text':      '#ffffff',   // primary text (full white)
+        'vs-text-lo':   '#b0b0b0',   // secondary text
+        'vs-text-dim':  '#777777',   // placeholders, disabled
 
         // ── Legacy aliases (keep for backward compat in existing components) ─
         'primary':   { light: '#cccccc', DEFAULT: '#1e1e1e', dark: '#1e1e1e' },
         'secondary': { light: '#999999', DEFAULT: '#505050', dark: '#333333' },
-        'accent': '#cccccc',
+        'accent': '#ffffff',
 
-        'background-dark':  '#1e1e1e',
-        'surface-dark':     '#252526',
-        'border-dark':      '#3c3c3c',
-        'text-dark':        '#cccccc',
-        'text-muted-dark':  '#999999',
+        'background-dark':  '#121212',
+        'surface-dark':     '#1a1a1a',
+        'border-dark':      '#4a4a4a',
+        'text-dark':        '#ffffff',
+        'text-muted-dark':  '#b0b0b0',
 
         'background-light': '#f5f5f5',
         'surface-light':    '#f0f0f0',
         'border-light':     '#d0d0d0',
-        'text-light':       '#1e1e1e',
+        'text-light':       '#0d0d0d',
         'text-muted-light': '#555555',
 
-        'deep-midnight': '#1e1e1e',
+        'deep-midnight': '#121212',
         black: '#000000',
         white: '#ffffff',
 
         // VS Code syntax tokens — used only inside code/content, not shell
         'vscode': {
-          bg:        '#1e1e1e',
-          sidebar:   '#252526',
-          panel:     '#2d2d2d',
+          bg:        '#121212',
+          sidebar:   '#1a1a1a',
+          panel:     '#1e1e1e',
           selection: '#264f78',
-          border:    '#3c3c3c',
+          border:    '#4a4a4a',
           blue:      '#569cd6',
           cyan:      '#4ec9b0',
           green:     '#6a9955',
@@ -66,8 +66,8 @@ export default {
           purple:    '#c586c0',
           yellow:    '#dcdcaa',
           red:       '#f48771',
-          text:      '#cccccc',
-          textMuted: '#858585',
+          text:      '#ffffff',
+          textMuted: '#9a9a9a',
         },
       },
 

@@ -48,6 +48,8 @@ services:
     environment:
       NEO4J_AUTH: neo4j/password
       NEO4J_PLUGINS: '["apoc"]'
+      # Community Edition only supports the default 'neo4j' database.
+      # Do NOT set NEO4J_DATABASE to anything other than 'neo4j' in server/.env.
     volumes:
       - chatbot_neo4j_data:/data
       - chatbot_neo4j_logs:/logs
@@ -91,15 +93,42 @@ services:
       retries: 5
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # SGLANG (Commented out purposely — utilizing host's shared port 8000)
+  # SGLANG — LLM Inference Server (GPU)
   # ═══════════════════════════════════════════════════════════════════════════
-  # As per instructions: SGLang is the ONLY common instance running on port 8000. 
-  # This avoids 4.5GB VRAM downloading collision. The node 'server' is already 
-  # configured to hit http://host.docker.internal:8000 below.
-  #
-  # sglang:
-  #   image: lmsysorg/sglang:latest
-  #   container_name: chatbot-sglang
+  # Qwen2.5-7B-AWQ on RTX A4000 16GB: ~4.5GB weights + ~3GB KV = ~7-8GB VRAM
+  # Exposes OpenAI-compatible API on port 8000
+
+  sglang:
+    image: lmsysorg/sglang:latest
+    container_name: chatbot-sglang
+    restart: unless-stopped
+    ports:
+      - "8000:30000"
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    environment:
+      - HF_HOME=/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    entrypoint: ["python3", "-m", "sglang.launch_server",
+      "--model-path", "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "--quantization", "awq",
+      "--host", "0.0.0.0",
+      "--port", "30000",
+      "--mem-fraction-static", "0.85",
+      "--context-length", "32768"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:30000/v1/models || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
   # ═══════════════════════════════════════════════════════════════════════════
   # MONITORING
@@ -151,10 +180,10 @@ services:
       MONGO_URI: mongodb://mongo:27017/chatbot_autoresearch
       REDIS_URL: redis://redis:6379/1
       NEO4J_URI: bolt://neo4j:7687
+      NEO4J_DATABASE: neo4j
       QDRANT_URL: http://qdrant:6333
       QDRANT_HOST: qdrant
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      PYTHON_RAG_SERVICE_URL: http://rag:2005
       SGLANG_ENABLED: "true"
       # Point to host's SGLang server across OS layer boundary
       SGLANG_CHAT_URL: http://host.docker.internal:8000/v1

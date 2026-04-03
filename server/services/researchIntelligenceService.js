@@ -12,14 +12,52 @@ const EVIDENCE_STRENGTH = {
 
 const validatedResearchSources = [];
 
+/**
+ * Nature × Depth configuration matrix.
+ *
+ * Controls total sources, per-provider quotas (in absolute counts), and
+ * synthesis targets (pages, sections, words-per-section).
+ *
+ * Source distribution rules:
+ *   ≥ 60%  academic (OpenAlex + Semantic Scholar)
+ *   10-20% ArXiv (more for "research" nature)
+ *   ≤ 30%  web (recent ≤ 3 months preferred; older tagged goldStandard)
+ */
+const NATURE_DEPTH_MATRIX = {
+    general: {
+        low:    { total: 30,  openAlex: 12, semantic: 6,  arxiv: 3,  web: 9,  pages: [3,4],  sections: 5,  minWordsPerSection: 400 },
+        medium: { total: 45,  openAlex: 18, semantic: 9,  arxiv: 5,  web: 13, pages: [4,5],  sections: 7,  minWordsPerSection: 500 },
+        high:   { total: 60,  openAlex: 24, semantic: 12, arxiv: 9,  web: 15, pages: [6,8],  sections: 9,  minWordsPerSection: 600 },
+    },
+    academic: {
+        low:    { total: 35,  openAlex: 16, semantic: 9,  arxiv: 5,  web: 5,  pages: [4,5],  sections: 6,  minWordsPerSection: 500 },
+        medium: { total: 50,  openAlex: 23, semantic: 13, arxiv: 8,  web: 7,  pages: [5,7],  sections: 8,  minWordsPerSection: 600 },
+        high:   { total: 65,  openAlex: 30, semantic: 16, arxiv: 10, web: 9,  pages: [8,10], sections: 11, minWordsPerSection: 700 },
+    },
+    research: {
+        low:    { total: 40,  openAlex: 16, semantic: 8,  arxiv: 8,  web: 8,  pages: [5,6],  sections: 7,  minWordsPerSection: 500 },
+        medium: { total: 55,  openAlex: 22, semantic: 11, arxiv: 11, web: 11, pages: [7,9],  sections: 10, minWordsPerSection: 650 },
+        high:   { total: 70,  openAlex: 28, semantic: 14, arxiv: 14, web: 14, pages: [10,12],sections: 13, minWordsPerSection: 750 },
+    },
+};
+
 const DEFAULT_RESEARCH_CONFIG = {
-    target_source_count: 5,
-    empirical_ratio: 0.5,
+    nature: 'academic',
+    depth:  'medium',
+    target_source_count: 50,
+    openAlexTarget:  23,
+    semanticTarget:  13,
+    arxivTarget:     8,
+    webTarget:       7,
+    empirical_ratio: 0.60,
     allow_adaptive_fallback: true,
-    minimum_counter_sources: 1,
-    minimum_industry_or_report: 1,
-    minimum_academic: 2,
-    strictness: 'standard'
+    minimum_counter_sources: 2,
+    minimum_industry_or_report: 2,
+    minimum_academic: 15,
+    strictness: 'standard',
+    targetPages: [5, 7],
+    targetSections: 8,
+    minWordsPerSection: 600,
 };
 
 function tokenize(text = '') {
@@ -184,35 +222,52 @@ function parseSourceCountFromQuery(query = '') {
 }
 
 const researchIntelligenceService = {
+    /**
+     * Resolve the research configuration from nature + depth.
+     * Users no longer specify source counts — they pick Nature and Depth.
+     */
     resolveResearchConfig(query, userConfig = null) {
-        const parsedSourceCount = parseSourceCountFromQuery(query);
-        const cfg = {
-            ...DEFAULT_RESEARCH_CONFIG,
-            ...(userConfig || {})
-        };
+        const cfg = { ...DEFAULT_RESEARCH_CONFIG, ...(userConfig || {}) };
 
-        if (typeof cfg.depthPreset === 'string') {
-            const preset = cfg.depthPreset.toLowerCase();
-            if (preset === 'standard') cfg.target_source_count = 5;
-            if (preset === 'deep') cfg.target_source_count = 8;
-            if (preset === 'extensive') cfg.target_source_count = 12;
-        }
+        // Normalise nature / depth from user selection
+        const nature = ['general', 'academic', 'research'].includes(cfg.nature)
+            ? cfg.nature : 'academic';
+        const depth  = ['low', 'medium', 'high'].includes(cfg.depth)
+            ? cfg.depth : 'medium';
 
-        if (parsedSourceCount) {
-            cfg.target_source_count = parsedSourceCount;
-        }
+        const preset = NATURE_DEPTH_MATRIX[nature][depth];
 
-        cfg.target_source_count = clamp(toNumber(cfg.target_source_count, 5), 3, 20);
-        cfg.empirical_ratio = clamp(toNumber(cfg.empirical_ratio, 0.5), 0.3, 0.9);
-        cfg.minimum_counter_sources = clamp(toNumber(cfg.minimum_counter_sources, 1), 0, 5);
-        cfg.minimum_industry_or_report = clamp(toNumber(cfg.minimum_industry_or_report, 1), 0, 5);
-        cfg.minimum_academic = clamp(toNumber(cfg.minimum_academic, 2), 1, 10);
+        // Apply preset — overrides any manual source-count specification
+        cfg.nature               = nature;
+        cfg.depth                = depth;
+        cfg.target_source_count  = preset.total;
+        cfg.openAlexTarget       = preset.openAlex;
+        cfg.semanticTarget       = preset.semantic;
+        cfg.arxivTarget          = preset.arxiv;
+        cfg.webTarget            = preset.web;
+        cfg.targetPages          = preset.pages;
+        cfg.targetSections       = preset.sections;
+        cfg.minWordsPerSection   = preset.minWordsPerSection;
+
+        // Academic-fraction drives the empirical ratio
+        const academicFraction   = (preset.openAlex + preset.semantic + preset.arxiv) / preset.total;
+        cfg.empirical_ratio      = Math.min(0.90, Math.round(academicFraction * 100) / 100);
+        cfg.empirical_required   = Math.ceil(preset.total * cfg.empirical_ratio);
+
+        // Scale minimums proportionally
+        cfg.minimum_academic             = Math.max(5,  Math.floor(preset.total * 0.25));
+        cfg.minimum_counter_sources      = Math.max(2,  Math.floor(preset.total * 0.04));
+        cfg.minimum_industry_or_report   = Math.max(2,  Math.floor(preset.total * 0.04));
+
         cfg.allow_adaptive_fallback = cfg.allow_adaptive_fallback !== false;
-
-        cfg.empirical_required = Math.ceil(cfg.target_source_count * cfg.empirical_ratio);
-        cfg.studentSpecifiedCount = Boolean(parsedSourceCount || (userConfig && userConfig.target_source_count));
+        cfg.studentSpecifiedCount   = false; // users choose nature/depth, not raw counts
 
         return cfg;
+    },
+
+    /** Expose the matrix so callers can show the config to users */
+    getNatureDepthMatrix() {
+        return NATURE_DEPTH_MATRIX;
     },
 
     buildQueryBlueprint(query, plan = {}) {
@@ -364,32 +419,53 @@ const researchIntelligenceService = {
     selectTopSourcesWithBalance(sources = [], researchConfig) {
         const cfg = researchConfig || DEFAULT_RESEARCH_CONFIG;
         const target = cfg.target_source_count;
-        const empiricalRequired = cfg.empirical_required;
+        const empiricalRequired = cfg.empirical_required || Math.ceil(target * 0.60);
 
         const sorted = [...sources].sort((a, b) => (b.source_score || 0) - (a.source_score || 0));
-        const empirical = sorted.filter(s => s.evidenceCategory === 'empirical' || s.sourceType === 'academic' || s.sourceRole?.datasetOrSurvey || s.sourceRole?.empiricalAcademic);
-        const nonEmpirical = sorted.filter(s => !(s.evidenceCategory === 'empirical' || s.sourceType === 'academic' || s.sourceRole?.datasetOrSurvey || s.sourceRole?.empiricalAcademic));
+        const empirical = sorted.filter(s =>
+            s.evidenceCategory === 'empirical' || s.sourceType === 'academic' ||
+            s.sourceRole?.datasetOrSurvey || s.sourceRole?.empiricalAcademic
+        );
+        const nonEmpirical = sorted.filter(s =>
+            !(s.evidenceCategory === 'empirical' || s.sourceType === 'academic' ||
+              s.sourceRole?.datasetOrSurvey || s.sourceRole?.empiricalAcademic)
+        );
 
         const picked = [];
 
-        const mustHave = [
-            ...sorted.filter(s => s.sourceType === 'academic').slice(0, cfg.minimum_academic),
-            ...sorted.filter(s => s.sourceRole?.industryFinancial || s.sourceRole?.policyGovReport).slice(0, cfg.minimum_industry_or_report),
-            ...sorted.filter(s => s.sourceRole?.counterPosition).slice(0, cfg.minimum_counter_sources)
+        // Provider-balanced mandatory picks
+        const openAlexSorted  = sorted.filter(s => s.sourceProvider === 'openalex');
+        const semanticSorted  = sorted.filter(s => s.sourceProvider === 'semantic_scholar');
+        const arxivSorted     = sorted.filter(s => s.sourceProvider === 'arxiv');
+        const webSorted       = sorted.filter(s => s.sourceType !== 'academic' && s.sourceType !== 'local');
+
+        const mandatoryGroups = [
+            { sources: openAlexSorted,  quota: cfg.openAlexTarget  || Math.floor(target * 0.40) },
+            { sources: semanticSorted,  quota: cfg.semanticTarget   || Math.floor(target * 0.20) },
+            { sources: arxivSorted,     quota: cfg.arxivTarget      || Math.floor(target * 0.12) },
+            { sources: webSorted,       quota: cfg.webTarget        || Math.floor(target * 0.25) },
         ];
 
+        for (const { sources: provSources, quota } of mandatoryGroups) {
+            let count = 0;
+            for (const src of provSources) {
+                if (count >= quota || picked.length >= target) break;
+                if (!picked.includes(src)) { picked.push(src); count++; }
+            }
+        }
+
+        // Fill remaining slots with highest-scored sources not yet picked
+        const mustHave = [
+            ...sorted.filter(s => s.sourceType === 'academic').slice(0, cfg.minimum_academic || 5),
+            ...sorted.filter(s => s.sourceRole?.industryFinancial || s.sourceRole?.policyGovReport).slice(0, cfg.minimum_industry_or_report || 2),
+            ...sorted.filter(s => s.sourceRole?.counterPosition).slice(0, cfg.minimum_counter_sources || 2),
+        ];
         for (const src of mustHave) {
             if (picked.length >= target) break;
             if (!picked.includes(src)) picked.push(src);
         }
 
-        for (const src of empirical) {
-            if (picked.length >= empiricalRequired || picked.length >= target) break;
-            if (!picked.includes(src)) picked.push(src);
-        }
-
-        const addRemaining = [...empirical.filter(s => !picked.includes(s)), ...nonEmpirical];
-        for (const src of addRemaining) {
+        for (const src of [...empirical.filter(s => !picked.includes(s)), ...nonEmpirical.filter(s => !picked.includes(s))]) {
             if (picked.length >= target) break;
             picked.push(src);
         }

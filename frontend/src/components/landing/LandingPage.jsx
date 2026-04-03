@@ -1,9 +1,11 @@
 // frontend/src/components/landing/LandingPage.jsx
 // Clean chat-style landing page for unauthenticated users.
 // Shows a simple chat interface with send + mic buttons only.
-// All advanced options are disabled until sign-in.
-import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Mic, Server } from 'lucide-react';
+// Supports real AI chat via /api/guest/chat with SSE streaming.
+// Advanced options (RAG, Tutor, Deep Research, KG) disabled until sign-in.
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ArrowUp, Mic, Server, Loader2 } from 'lucide-react';
+import { renderMarkdown } from '../../utils/markdownUtils';
 
 // ─── Minimal top nav ──────────────────────────────────────
 function LandingNav({ onLoginClick }) {
@@ -37,6 +39,7 @@ function LandingNav({ onLoginClick }) {
 // ─── Single chat bubble ───────────────────────────────────
 function ChatBubble({ role, text }) {
     const isUser = role === 'user';
+    const isEmpty = !text || text.trim() === '';
     return (
         <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full`}>
             <div
@@ -46,7 +49,19 @@ function ChatBubble({ role, text }) {
                         : 'bg-[#1a1a1a] border border-white/10 text-gray-200 rounded-bl-md'
                 }`}
             >
-                {text}
+                {isEmpty ? (
+                    <span className="flex items-center gap-2 text-gray-400">
+                        <Loader2 size={14} className="animate-spin" />
+                        Thinking...
+                    </span>
+                ) : isUser ? (
+                    <span style={{ whiteSpace: 'pre-wrap' }}>{text}</span>
+                ) : (
+                    <div
+                        className="prose prose-invert prose-sm max-w-none"
+                        dangerouslySetInnerHTML={renderMarkdown(text)}
+                    />
+                )}
             </div>
         </div>
     );
@@ -57,8 +72,11 @@ function LandingPage({ onLoginClick }) {
     const [inputValue, setInputValue] = useState('');
     const [messages, setMessages] = useState([]);
     const [showAuthHint, setShowAuthHint] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [guestMessageCount, setGuestMessageCount] = useState(0);
     const textareaRef = useRef(null);
     const chatEndRef = useRef(null);
+    const abortRef = useRef(null);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -73,41 +91,120 @@ function LandingPage({ onLoginClick }) {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = () => {
-        if (!inputValue.trim()) return;
+    const handleSend = useCallback(async () => {
+        if (!inputValue.trim() || isStreaming) return;
 
-        // Add user message to the chat
-        const userMsg = { role: 'user', text: inputValue.trim() };
+        const userQuery = inputValue.trim();
+        const userMsg = { role: 'user', text: userQuery };
         setMessages(prev => [...prev, userMsg]);
         setInputValue('');
+        setIsStreaming(true);
 
-        // Show auth prompt after a brief delay
-        setTimeout(() => {
-            setMessages(prev => [
-                ...prev,
-                {
-                    role: 'assistant',
-                    text: 'Sign in to start chatting with iMentor \u2014 your personal AI learning assistant. It only takes a moment!'
+        // Add a placeholder bot message for streaming
+        const botIdx = Date.now();
+        setMessages(prev => [...prev, { role: 'assistant', text: '', _streamId: botIdx }]);
+
+        // Abort any previous request
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        try {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
+            const res = await fetch(`${apiBase}/guest/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: userQuery }),
+                signal: controller.signal,
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `Server error: ${res.status}`);
+            }
+
+            // Parse SSE stream
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let finalText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let idx;
+                while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                    const chunk = buffer.slice(0, idx).trim();
+                    buffer = buffer.slice(idx + 2);
+                    if (!chunk.startsWith('data: ')) continue;
+
+                    try {
+                        const event = JSON.parse(chunk.slice(6));
+                        if (event.type === 'token' && event.content) {
+                            // Streaming token — append to the bot message
+                            finalText += event.content;
+                            const currentText = finalText;
+                            setMessages(prev =>
+                                prev.map(m => m._streamId === botIdx ? { ...m, text: currentText } : m)
+                            );
+                        } else if (event.type === 'final_answer' && event.content) {
+                            // Final answer — replace bot message with full text
+                            const fullText = event.content.text || finalText;
+                            setMessages(prev =>
+                                prev.map(m => m._streamId === botIdx ? { ...m, text: fullText, _streamId: undefined } : m)
+                            );
+                            finalText = fullText;
+                        }
+                    } catch (_) { /* skip malformed */ }
                 }
-            ]);
-            setShowAuthHint(true);
-        }, 600);
-    };
+            }
+
+            // If we somehow got no text, use what we accumulated
+            if (!finalText) {
+                setMessages(prev =>
+                    prev.map(m => m._streamId === botIdx
+                        ? { ...m, text: "I couldn't generate a response. Please try again!", _streamId: undefined }
+                        : m
+                    )
+                );
+            }
+
+            // Show sign-in hint after a few messages
+            const newCount = guestMessageCount + 1;
+            setGuestMessageCount(newCount);
+            if (newCount >= 3) {
+                setShowAuthHint(true);
+            }
+
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            console.error('Guest chat error:', err);
+            setMessages(prev =>
+                prev.map(m => m._streamId === botIdx
+                    ? { ...m, text: err.message || 'Something went wrong. Please try again!', _streamId: undefined }
+                    : m
+                )
+            );
+        } finally {
+            setIsStreaming(false);
+        }
+    }, [inputValue, isStreaming, guestMessageCount]);
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && !isStreaming) {
             e.preventDefault();
             handleSend();
         }
     };
 
     const handleMicClick = () => {
-        // Show an auth prompt so the user knows sign-in is required for voice
+        // Voice input requires sign-in for speech recognition permissions
         setMessages(prev => [
             ...prev,
-            { role: 'assistant', text: 'Sign in to use voice input with iMentor — your personal AI learning assistant.' }
+            { role: 'assistant', text: 'Voice input is available after signing in. You can type your question below — I\'m happy to help!' }
         ]);
-        setShowAuthHint(true);
     };
 
     return (
@@ -145,21 +242,24 @@ function LandingPage({ onLoginClick }) {
                             <ChatBubble key={i} role={msg.role} text={msg.text} />
                         ))}
 
-                        {/* Auth CTA after bot response */}
+                        {/* Gentle sign-in suggestion after a few messages */}
                         {showAuthHint && (
-                            <div className="flex justify-center gap-3 mt-4">
-                                <button
-                                    onClick={() => onLoginClick(true)}
-                                    className="px-5 py-2 text-sm font-semibold text-black bg-white rounded-lg hover:bg-gray-200 transition-colors"
-                                >
-                                    Sign In to Continue
-                                </button>
-                                <button
-                                    onClick={() => onLoginClick(false)}
-                                    className="px-5 py-2 text-sm font-semibold text-white border border-white/20 rounded-lg hover:bg-white/10 transition-colors"
-                                >
-                                    Create Account
-                                </button>
+                            <div className="flex flex-col items-center gap-2 mt-4 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20">
+                                <p className="text-xs text-teal-300/80">Sign in to unlock Tutor Mode, course materials, history saving, and more.</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => onLoginClick(true)}
+                                        className="px-4 py-1.5 text-xs font-semibold text-black bg-white rounded-lg hover:bg-gray-200 transition-colors"
+                                    >
+                                        Sign In
+                                    </button>
+                                    <button
+                                        onClick={() => onLoginClick(false)}
+                                        className="px-4 py-1.5 text-xs font-semibold text-white border border-white/20 rounded-lg hover:bg-white/10 transition-colors"
+                                    >
+                                        Create Account
+                                    </button>
+                                </div>
                             </div>
                         )}
                         <div ref={chatEndRef} />
@@ -194,21 +294,21 @@ function LandingPage({ onLoginClick }) {
                         {/* Send button */}
                         <button
                             onClick={handleSend}
-                            disabled={!inputValue.trim()}
+                            disabled={!inputValue.trim() || isStreaming}
                             className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
-                                inputValue.trim()
+                                inputValue.trim() && !isStreaming
                                     ? 'bg-white text-black hover:bg-gray-200'
                                     : 'bg-white/10 text-gray-600 cursor-not-allowed'
                             }`}
                             title="Send message"
                             aria-label="Send message"
                         >
-                            <ArrowUp size={18} />
+                            {isStreaming ? <Loader2 size={18} className="animate-spin" /> : <ArrowUp size={18} />}
                         </button>
                     </div>
 
                     <p className="text-center text-[11px] text-gray-600 mt-2">
-                        Sign in to unlock Tutor Mode, Deep Research, Knowledge Base, and more.
+                        Ask anything — sign in to unlock Tutor Mode, Deep Research, Knowledge Base, and more.
                     </p>
                 </div>
             </div>

@@ -8,99 +8,95 @@
       "id": "mcq_1",
       "question": "What is the primary goal of the K-means algorithm?",
       "options": [
-        "A) To maximize the distance between clusters.",
-        "B) To minimize the distance of each point to its cluster's centroid.",
-        "C) To create clusters with the highest possible variance.",
-        "D) To ensure all clusters have an equal number of points."
+        "A) To minimize the distance between data points and their cluster centers.",
+        "B) To maximize the distance between different clusters.",
+        "C) To find the maximum number of clusters.",
+        "D) To classify data points into predefined categories."
       ],
-      "correct_option": "B",
-      "explanation": "The primary goal of K-means is to minimize the within-cluster sum of squares (WCSS), which is achieved by minimizing the distance of each point to its cluster's centroid.",
+      "correct_option": "A",
+      "explanation": "The primary goal of K-means is to minimize the sum of squared distances between data points and their respective cluster centers.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is a potential drawback of the K-means algorithm?",
+      "question": "Which of the following is a requirement for initializing the K-means algorithm?",
       "options": [
-        "A) It can handle large datasets efficiently.",
-        "B) It requires the number of clusters to be specified in advance.",
-        "C) It is not sensitive to outliers.",
-        "D) It can automatically determine the optimal number of clusters."
+        "A) The number of clusters (k) must be specified.",
+        "B) The data points must be sorted.",
+        "C) The algorithm must run for a fixed number of iterations.",
+        "D) The initial cluster centers must be evenly spaced."
       ],
-      "correct_option": "B",
-      "explanation": "K-means requires the number of clusters to be specified in advance, which can be a drawback if the true number of clusters is unknown.",
-      "difficulty": "intermediate",
-      "bloom_level": "understand"
+      "correct_option": "A",
+      "explanation": "The number of clusters (k) must be specified before running the K-means algorithm.",
+      "difficulty": "beginner",
+      "bloom_level": "remember"
     },
     {
       "id": "mcq_3",
-      "question": "What happens if the initial centroids are chosen poorly in K-means?",
+      "question": "What is the main difference between the K-means algorithm and hierarchical clustering?",
       "options": [
-        "A) The algorithm will run faster.",
-        "B) The algorithm will converge to the global minimum.",
-        "C) The algorithm may converge to a local minimum.",
-        "D) The algorithm will automatically adjust the number of clusters."
+        "A) K-means requires the number of clusters to be specified, while hierarchical clustering does not.",
+        "B) K-means can handle large datasets, while hierarchical clustering cannot.",
+        "C) K-means is a centroid-based algorithm, while hierarchical clustering is a linkage-based algorithm.",
+        "D) K-means is a non-parametric method, while hierarchical clustering is a parametric method."
       ],
       "correct_option": "C",
-      "explanation": "Choosing poor initial centroids can lead the K-means algorithm to converge to a local minimum rather than the global minimum.",
+      "explanation": "K-means is a centroid-based algorithm, where clusters are defined by their centroids, while hierarchical clustering is a linkage-based algorithm, where clusters are formed by merging smaller clusters.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following is a valid reason for using K-means in real-world applications?",
+      "question": "Which of the following can cause the K-means algorithm to converge to a local minimum?",
       "options": [
-        "A) It can handle non-linear data.",
-        "B) It is the most efficient algorithm for large datasets.",
-        "C) It can be used for customer segmentation.",
-        "D) It guarantees to find the optimal clustering solution."
+        "A) Choosing the initial cluster centers randomly.",
+        "B) Using a large number of clusters.",
+        "C) Having data points with very high variance.",
+        "D) Running the algorithm for a fixed number of iterations."
       ],
-      "correct_option": "C",
-      "explanation": "K-means is often used for customer segmentation, among other applications, due to its simplicity and effectiveness in grouping similar data points.",
-      "difficulty": "advanced",
-      "bloom_level": "understand"
+      "correct_option": "A",
+      "explanation": "Choosing the initial cluster centers randomly can cause the K-means algorithm to converge to a local minimum.",
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_5",
-      "question": "What is the role of the within-cluster sum of squares (WCSS) in K-means?",
+      "question": "What is the role of the 'mean' in the K-means algorithm?",
       "options": [
-        "A) It is used to determine the optimal number of clusters.",
-        "B) It is minimized to find the best clustering solution.",
-        "C) It is a measure of the distance between clusters.",
-        "D) It is used to initialize the centroids randomly."
+        "A) To calculate the average distance between data points and their cluster centers.",
+        "B) To determine the optimal number of clusters.",
+        "C) To represent the center of each cluster.",
+        "D) To classify new data points into existing clusters."
       ],
-      "correct_option": "B",
-      "explanation": "The within-cluster sum of squares (WCSS) is minimized in K-means to find the best clustering solution, where each point is as close as possible to its cluster's centroid.",
+      "correct_option": "C",
+      "explanation": "The 'mean' in the K-means algorithm represents the center of each cluster, which is used to update the cluster assignments.",
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "understand"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain how the choice of initial centroids can affect the outcome of the K-means algorithm.",
-      "model_answer": "The choice of initial centroids can significantly affect the outcome of the K-means algorithm. If the initial centroids are chosen poorly, the algorithm may converge to a local minimum rather than the global minimum. This can result in suboptimal clustering, where data points are not grouped as effectively as they could be. Proper initialization techniques, such as k-means++, can help mitigate this issue by providing better initial centroids.",
+      "question": "Explain how the K-means algorithm works in a few sentences.",
+      "model_answer": "The K-means algorithm starts by randomly initializing the cluster centers. Then, it assigns each data point to the nearest cluster center based on the Euclidean distance. After all points are assigned, the cluster centers are recalculated as the mean of the points in each cluster. This process is repeated until the cluster assignments no longer change or a maximum number of iterations is reached.",
       "key_concepts": [
-        "initial centroids",
-        "local minimum",
-        "global minimum",
-        "k-means++"
+        "K-means",
+        "cluster centers",
+        "Euclidean distance",
+        "mean"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Discuss the limitations of the K-means algorithm and suggest ways to overcome them.",
-      "model_answer": "The K-means algorithm has several limitations, including the need to specify the number of clusters in advance, sensitivity to outliers, and potential to converge to a local minimum. To overcome these limitations, one can use techniques such as cross-validation to determine the optimal number of clusters, apply robust methods to handle outliers, and use initialization techniques like k-means++ to improve convergence. Additionally, alternative clustering algorithms or ensemble methods can be used to provide more robust and accurate clustering results.",
+      "question": "Discuss the limitations of the K-means algorithm and suggest a scenario where it might fail.",
+      "model_answer": "K-means has several limitations, including sensitivity to the initial placement of cluster centers, which can lead to convergence to a local minimum. Additionally, it assumes that clusters are spherical and of similar size, which may not be the case in real-world data. A scenario where K-means might fail is when the data points are not evenly distributed or when there are outliers that significantly affect the cluster centers.",
       "key_concepts": [
-        "number of clusters",
-        "outliers",
         "local minimum",
-        "cross-validation",
-        "k-means++",
-        "alternative clustering algorithms",
-        "ensemble methods"
+        "spherical clusters",
+        "outliers"
       ],
       "difficulty": "advanced",
       "bloom_level": "analyze"
@@ -108,51 +104,46 @@
     {
       "id": "sa_3",
       "question": "Compare and contrast the K-means algorithm with hierarchical clustering.",
-      "model_answer": "K-means and hierarchical clustering are both clustering algorithms, but they differ in their approach and characteristics. K-means is a partitioning method that divides the data into a fixed number of clusters based on minimizing the within-cluster sum of squares. In contrast, hierarchical clustering builds a tree-like structure (dendrogram) by merging or splitting clusters recursively. K-means is generally faster and more efficient for large datasets, while hierarchical clustering can provide more detailed insights into the hierarchical structure of the data. However, hierarchical clustering can be computationally expensive for large datasets, and K-means may require specifying the number of clusters in advance.",
+      "model_answer": "K-means and hierarchical clustering are both clustering algorithms, but they differ in their approach. K-means is a centroid-based algorithm that requires the number of clusters to be specified in advance and iteratively updates the cluster centers. Hierarchical clustering, on the other hand, is a linkage-based algorithm that builds a tree of clusters and does not require the number of clusters to be specified. K-means is generally faster and more scalable, while hierarchical clustering can provide more insights into the structure of the data.",
       "key_concepts": [
-        "partitioning method",
-        "fixed number of clusters",
-        "within-cluster sum of squares",
-        "tree-like structure",
-        "dendrogram",
-        "recursive merging",
-        "computational efficiency",
+        "centroid-based",
+        "linkage-based",
         "number of clusters"
       ],
-      "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "difficulty": "intermediate",
+      "bloom_level": "compare"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "K-means",
-      "back": "A clustering algorithm that partitions data into $k$ clusters by minimizing the within-cluster sum of squares (WCSS), where each point is assigned to the nearest centroid.",
-      "hint": "Think of it as grouping similar data points."
+      "back": "A centroid-based clustering algorithm that partitions data into k clusters by minimizing the sum of squared distances between data points and their respective cluster centers.",
+      "hint": "Think of 'k' as the number of groups and 'means' as the center of each group."
     },
     {
       "id": "fc_2",
-      "front": "Centroid",
-      "back": "The mean position of all the points in a cluster, used as the reference point for assigning data points to clusters in K-means.",
-      "hint": "It's the average of the points."
+      "front": "Cluster Center",
+      "back": "The mean of the data points assigned to a cluster in the K-means algorithm. It is updated in each iteration to minimize the within-cluster sum of squares.",
+      "hint": "It's the 'center' of the cluster."
     },
     {
       "id": "fc_3",
-      "front": "WCSS",
-      "back": "Within-cluster sum of squares, a measure of the total squared distance between each data point and its corresponding centroid, used to evaluate the quality of clustering in K-means.",
-      "hint": "Sum of squared distances."
+      "front": "Local Minimum",
+      "back": "A situation in the K-means algorithm where the algorithm gets stuck in a suboptimal solution due to the initial placement of cluster centers.",
+      "hint": "Avoid by using multiple initializations."
     },
     {
       "id": "fc_4",
-      "front": "Initialization",
-      "back": "The process of selecting initial centroids for the K-means algorithm, which can significantly affect the final clustering result.",
-      "hint": "Choosing starting points."
+      "front": "Euclidean Distance",
+      "back": "A measure of the straight-line distance between two points in a multi-dimensional space, used in the K-means algorithm to assign data points to the nearest cluster center.",
+      "hint": "Think of it as the 'straight line' distance."
     },
     {
       "id": "fc_5",
-      "front": "Local Minimum",
-      "back": "A suboptimal solution in the K-means algorithm where the algorithm converges to a local minimum rather than the global minimum, potentially leading to poor clustering.",
-      "hint": "Not the best solution."
+      "front": "Spherical Clusters",
+      "back": "A limitation of the K-means algorithm, where it assumes that clusters are spherical and of similar size, which may not be the case in real-world data.",
+      "hint": "Not all clusters are spherical."
     }
   ],
   "topic_id": "clustering"

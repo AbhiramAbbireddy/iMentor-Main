@@ -1,13 +1,15 @@
 const log = require('../utils/logger');
 /**
- * Deep Research Orchestrator
- * 
- * Coordinates the entire deep research workflow:
- * 1. Checks Cache
- * 2. Fetches Local Knowledge
- * 3. Fetches Online Academic & Web Results (Parallel)
- * 4. Merges & Ranks Sources by Credibility
- * 5. Returns Structured Research Response
+ * Deep Research Orchestrator  (v2)
+ *
+ * Key changes vs v1:
+ *  - Users pick Nature (general / academic / research) + Depth (low / medium / high)
+ *    instead of specifying source counts.
+ *  - Source targets come from the 3×3 Nature×Depth matrix (30–70 sources).
+ *  - LLM generates source-type-specific queries; cosine dedup removes redundant ones.
+ *  - OpenAlex, Semantic Scholar, ArXiv fetched independently against their quotas.
+ *  - Web sources are tagged: older than 3 months → goldStandard=true.
+ *  - Supports a "fire-and-forget" execution path via runResearchJob().
  */
 
 const ResearchCache = require('../models/ResearchCache');
@@ -21,6 +23,7 @@ const academicSourceService = require('./academicSourceService');
 const citationGraphService = require('./citationGraphService');
 const factCheckingService = require('./factCheckingService');
 const researchIntelligenceService = require('./researchIntelligenceService');
+const researchQueryGenerator = require('./researchQueryGenerator');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -28,6 +31,9 @@ const { createPerformanceTracker, logPerformance } = require('./performanceDiagn
 
 const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://rag:8000';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CrewAI path (feature-flag gated)
+// ─────────────────────────────────────────────────────────────────────────────
 async function runCrewAiResearch(query, options = {}, onProgress = null) {
     log.info('SYSTEM', `Starting CrewAI deep research for: "${query}"`);
     if (onProgress) onProgress({ phase: 'init', message: 'Initializing CrewAI Research Agents...' });
@@ -38,185 +44,248 @@ async function runCrewAiResearch(query, options = {}, onProgress = null) {
         const response = await axios.post(`${RAG_SERVICE_URL}/crewai-research`, {
             topic: query,
         }, {
-            timeout: 900000, // 15 minutes timeout for deep research
+            timeout: 900000,
             headers: { 'Content-Type': 'application/json' }
         });
 
         if (onProgress) onProgress({ phase: 'synthesizing', message: 'Agents are synthesizing the final report...' });
 
         const finalReport = response.data.result;
-
         if (!finalReport || typeof finalReport !== 'string' || finalReport.trim() === '') {
             throw new Error('CrewAI returned an empty or invalid report.');
         }
-        
-        // Simulate some of the old structure for compatibility
+
         const researchResult = {
-            query,
-            userId: options.userId,
+            query, userId: options.userId,
             normalizedQuery: query.toLowerCase().trim(),
-            sources: [], // CrewAI currently returns a single report
-            overallConfidenceScore: 95, // Placeholder
+            sources: [], overallConfidenceScore: 95,
             createdAt: new Date(),
             researchReport: { fullReport: finalReport, summary: finalReport.slice(0, 500) }
         };
 
-        if (onProgress) {
-            onProgress({
-                phase: 'completed',
-                message: 'Research Complete.',
-                fullReport: researchResult.researchReport,
-                metaData: {
-                    retrievalMode: 'CrewAI',
-                    totalSources: 0,
-                    confidenceScore: 95,
-                },
-                sourceData: [],
-                graphData: null
-            });
-        }
-        
-        log.success('AI', `CrewAI research complete for: "${query}"`);
+        if (onProgress) onProgress({ phase: 'completed', message: 'Research Complete.',
+            fullReport: researchResult.researchReport,
+            metaData: { retrievalMode: 'CrewAI', totalSources: 0, confidenceScore: 95 },
+            sourceData: [], graphData: null });
 
-        return {
-            researchBundle: researchResult,
-            researchReport: researchResult.researchReport,
-            performanceDiagnostics: {}, // Placeholder
-        };
+        log.success('AI', `CrewAI research complete for: "${query}"`);
+        return { researchBundle: researchResult, researchReport: researchResult.researchReport, performanceDiagnostics: {} };
 
     } catch (error) {
         log.error('AI', `CrewAI research failed: ${error.message}`);
-        if (error.response) {
-            log.error('AI', `RAG service response: ${JSON.stringify(error.response.data)}`);
-        }
         if (onProgress) onProgress({ phase: 'error', message: `CrewAI research failed: ${error.message}` });
         throw error;
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-provider fetching with quota enforcement
+// ─────────────────────────────────────────────────────────────────────────────
 
-async function retrieveSourcesForQuerySet(queries, { academicPerQuery = 2, webPerQuery = 2, maxConcurrent = 3 } = {}) {
-    const results = [];
-
-    for (let i = 0; i < queries.length; i += maxConcurrent) {
-        const batch = queries.slice(i, i + maxConcurrent);
-
-        const batchJobs = batch.map(async (expandedQuery) => {
-            const [academicResult, webResult] = await Promise.allSettled([
-                academicSourceService.retrieveSources(expandedQuery, { limit: academicPerQuery }),
-                webCrawlerService.searchAndCrawl(expandedQuery, webPerQuery)
-            ]);
-
-            const academicSources = academicResult.status === 'fulfilled'
-                ? (academicResult.value || []).map(source => ({ ...source, retrievalQuery: expandedQuery }))
-                : [];
-
-            const webSources = webResult.status === 'fulfilled'
-                ? (webResult.value || []).map(source => ({ ...source, retrievalQuery: expandedQuery }))
-                : [];
-
-            return [...academicSources, ...webSources];
-        });
-
-        const settled = await Promise.all(batchJobs);
-        results.push(...settled.flat());
-    }
-
-    return results;
+async function fetchOpenAlexQuota(queries, quota) {
+    if (!queries.length || quota <= 0) return [];
+    const perQuery = Math.ceil(quota / queries.length) + 2;
+    return academicSourceService.fetchOpenAlexBatch(queries, perQuery);
 }
+
+async function fetchSemanticQuota(queries, quota) {
+    if (!queries.length || quota <= 0) return [];
+    const perQuery = Math.ceil(quota / queries.length) + 2;
+    return academicSourceService.fetchSemanticBatch(queries, perQuery);
+}
+
+async function fetchArxivQuota(queries, quota) {
+    if (!queries.length || quota <= 0) return [];
+    const perQuery = Math.ceil(quota / queries.length) + 2;
+    return academicSourceService.fetchArxivBatch(queries, perQuery);
+}
+
+async function fetchWebQuota(queries, quota) {
+    if (!queries.length || quota <= 0) return [];
+    const perQuery = Math.max(2, Math.ceil(quota / queries.length));
+    const results = [];
+    const seen = new Set();
+    for (const q of queries) {
+        try {
+            const webSources = await webCrawlerService.searchAndCrawl(q, perQuery);
+            for (const s of (webSources || [])) {
+                const key = (s.url || s.title || '').toLowerCase();
+                if (key && !seen.has(key)) { seen.add(key); results.push(s); }
+                if (results.length >= quota * 1.5) break;
+            }
+        } catch (_) { /* skip failed web query */ }
+    }
+    // Tag recency and goldStandard
+    return academicSourceService.tagWebSources(results);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Orchestrator
+// ─────────────────────────────────────────────────────────────────────────────
 
 const deepResearchOrchestrator = {
 
     /**
      * Run a comprehensive deep research query.
-     * @param {string} query - The research subject.
-     * @param {Object} options - { forceRefresh: boolean, userId: string }
-     * @returns {Promise<Object>} The full research result set.
+     * Supports synchronous (SSE streaming) and fire-and-forget (job-based) modes.
+     *
+     * @param {string} query
+     * @param {object} options  – { forceRefresh, userId, nature, depth, researchConfig, jobDoc }
+     * @param {function|null} onProgress  – called with { phase, message, ... } events
      */
     async runDeepResearch(query, options = {}, onProgress = null) {
-        // Route to CrewAI if the feature flag is enabled or for specific queries
+        // ── Route to CrewAI if flag set ───────────────────────────────────────
         if (process.env.USE_CREWAI_RESEARCH === 'true') {
             return runCrewAiResearch(query, options, onProgress);
         }
 
-        const startTime = Date.now();
-        const perf = createPerformanceTracker({ mode: 'deepResearch', queryPreview: String(query || '').slice(0, 80) });
+        const startTime      = Date.now();
+        const perf           = createPerformanceTracker({ mode: 'deepResearch', queryPreview: String(query || '').slice(0, 80) });
         const normalizedQuery = query.toLowerCase().trim();
-        const researchConfig = researchIntelligenceService.resolveResearchConfig(query, options.researchConfig || null);
+        const jobDoc          = options.jobDoc || null; // ResearchJob doc for progress persistence
 
-        log.info('SYSTEM', `Deep research started: "${query}"`);
-        if (onProgress) onProgress({ phase: 'init', message: 'Initializing Research Engine...' });
+        // Build research config from Nature × Depth
+        const researchConfig = researchIntelligenceService.resolveResearchConfig(query, {
+            nature: options.nature || options.researchConfig?.nature || 'academic',
+            depth:  options.depth  || options.researchConfig?.depth  || 'medium',
+            ...(options.researchConfig || {}),
+        });
 
-        // 0. Generate research plan with analytical decomposition
-        if (onProgress) onProgress({ phase: 'planning', message: 'Generating Academic Research Plan...' });
+        const progress = async (phase, message, extra = {}) => {
+            if (onProgress) onProgress({ phase, message, ...extra });
+            if (jobDoc) await jobDoc.addProgress(phase, message).catch(() => {});
+        };
 
+        log.info('SYSTEM', `Deep research [${researchConfig.nature}/${researchConfig.depth}] "${query}" — target: ${researchConfig.target_source_count} sources`);
+        await progress('init', `Research engine initialised (${researchConfig.nature} / ${researchConfig.depth})`);
+
+        // ── 0. Generate research plan ─────────────────────────────────────────
+        await progress('planning', 'Generating research plan...');
         let researchPlan = {};
         try {
             const planStart = Date.now();
             researchPlan = await researchPlanService.generatePlan(query, options.userId);
             perf.addLlm(Date.now() - planStart);
-            researchPlan = {
-                ...researchPlan,
-                ...researchIntelligenceService.buildQueryBlueprint(query, researchPlan)
-            };
-            if (onProgress) onProgress({ phase: 'plan_ready', plan: researchPlan });
-            await new Promise(r => setTimeout(r, 1500));
+            researchPlan = { ...researchPlan, ...researchIntelligenceService.buildQueryBlueprint(query, researchPlan) };
+            await progress('plan_ready', 'Research plan ready', { plan: researchPlan });
         } catch (planError) {
             researchPlan = researchIntelligenceService.buildQueryBlueprint(query, {});
-            if (onProgress) onProgress({ phase: 'plan_ready', plan: researchPlan });
+            await progress('plan_ready', 'Using fallback research plan', { plan: researchPlan });
         }
 
-        // 1. Check Cache
+        // ── 1. Cache check ────────────────────────────────────────────────────
         if (!options.forceRefresh) {
             const dbReadStart = Date.now();
             const cachedResult = await ResearchCache.findOne({ normalizedQuery }).sort({ createdAt: -1 }).lean();
             perf.addDb(Date.now() - dbReadStart);
-            if (cachedResult && cachedResult.sources && cachedResult.sources.length >= Math.min(researchConfig.target_source_count, 5)) {
+            if (cachedResult?.sources?.length >= Math.min(researchConfig.target_source_count, 10)) {
                 log.info('SYSTEM', `Research cache hit: "${query}"`);
-
-                if (onProgress) {
-                    onProgress({
-                        phase: 'completed',
-                        message: 'Retrieved from Cache',
-                        fullReport: cachedResult.researchReport,
-                        metaData: {
-                            retrievalMode: cachedResult.mode || 'HYBRID',
-                            totalSources: cachedResult.sources?.length || 0,
-                            academicSources: cachedResult.onlineSourceCount || 0,
-                            webSources: 0,
-                            confidenceScore: cachedResult.overallConfidenceScore || 0,
-                            evidenceProfile: cachedResult.evidenceProfile || null
-                        },
-                        sourceData: cachedResult.sources,
-                        graphData: cachedResult.citationGraphData
-                    });
-                }
+                if (onProgress) onProgress({ phase: 'completed', message: 'Retrieved from Cache',
+                    fullReport: cachedResult.researchReport,
+                    metaData: { retrievalMode: cachedResult.mode || 'HYBRID', totalSources: cachedResult.sources?.length || 0, confidenceScore: cachedResult.overallConfidenceScore || 0 },
+                    sourceData: cachedResult.sources, graphData: cachedResult.citationGraphData });
 
                 if (cachedResult.researchReport && Object.keys(cachedResult.researchReport).length > 0) {
-                    const diagnostics = perf.toLogPayload({
-                        branchCount: 1,
-                        toolCalls: 0,
-                        tokenUsageEstimate: Math.ceil(String(cachedResult.researchReport?.fullReport || '').length / 4),
-                    });
+                    const diagnostics = perf.toLogPayload({ branchCount: 1, toolCalls: 0, tokenUsageEstimate: Math.ceil(String(cachedResult.researchReport?.fullReport || '').length / 4) });
                     logPerformance(diagnostics);
-                    return {
-                        researchBundle: cachedResult,
-                        researchReport: cachedResult.researchReport,
-                        performanceDiagnostics: diagnostics,
-                    };
+                    return { researchBundle: cachedResult, researchReport: cachedResult.researchReport, performanceDiagnostics: diagnostics };
                 }
             }
         }
 
-        // 2. Fetch local evidence
-        if (onProgress) onProgress({ phase: 'searching_local', message: 'Checking Internal Knowledge Graph...' });
-        const localStart = Date.now();
+        // ── 2. Generate source-type-specific queries via LLM ─────────────────
+        await progress('generating_queries', 'Generating specialised search queries...');
+        let querySets = { openalex: [], semantic: [], arxiv: [], web: [] };
+        try {
+            querySets = await researchQueryGenerator.generateQuerySets(query, researchConfig, options.userId);
+            log.info('RESEARCH', `Query sets — OA:${querySets.openalex.length} SS:${querySets.semantic.length} Ax:${querySets.arxiv.length} Web:${querySets.web.length}`);
+        } catch (qErr) {
+            log.warn('RESEARCH', `Query generation failed, using plan queries: ${qErr.message}`);
+            const planQueries = researchPlan.expanded_search_queries || [query];
+            querySets.openalex = planQueries.slice(0, 8);
+            querySets.semantic = planQueries.slice(0, 6);
+            querySets.arxiv    = planQueries.slice(0, 4);
+            querySets.web      = planQueries.slice(0, 3);
+        }
+
+        // ── 3. Local knowledge ───────────────────────────────────────────────
+        await progress('searching_local', 'Checking internal knowledge graph...');
+        const localStart   = Date.now();
         const localSources = await localKnowledgeBase.getLocalSources(query, { limit: 10 });
         perf.addTool(Date.now() - localStart);
-        const reusableValidatedSources = researchIntelligenceService.getReusableValidatedSources(query, researchConfig.target_source_count);
+        const reusableSources = researchIntelligenceService.getReusableValidatedSources(query, researchConfig.target_source_count);
 
-        const expandedQueries = (researchPlan.expanded_search_queries || []).slice(0, 10);
-        const counterQueries = (researchPlan.counter_evidence_queries || []).slice(0, 6);
+        // ── 4. Parallel academic + web fetch with per-provider quotas ─────────
+        await progress('searching_online', `Fetching from OpenAlex (${researchConfig.openAlexTarget}), Semantic Scholar (${researchConfig.semanticTarget}), ArXiv (${researchConfig.arxivTarget}), Web (${researchConfig.webTarget})...`);
+
+        const onlineStart = Date.now();
+        const [openAlexResult, semanticResult, arxivResult, webResult] = await Promise.allSettled([
+            fetchOpenAlexQuota(querySets.openalex, researchConfig.openAlexTarget),
+            fetchSemanticQuota(querySets.semantic,  researchConfig.semanticTarget),
+            fetchArxivQuota(querySets.arxiv,        researchConfig.arxivTarget),
+            fetchWebQuota(querySets.web,             researchConfig.webTarget),
+        ]);
+        perf.addTool(Date.now() - onlineStart);
+
+        const openAlexSources  = openAlexResult.status  === 'fulfilled' ? openAlexResult.value  : [];
+        const semanticSources  = semanticResult.status  === 'fulfilled' ? semanticResult.value  : [];
+        const arxivSources     = arxivResult.status     === 'fulfilled' ? arxivResult.value     : [];
+        const rawWebSources    = webResult.status        === 'fulfilled' ? webResult.value       : [];
+
+        // Separate recent vs gold-standard web
+        const recentWebSources     = rawWebSources.filter(s => !s.goldStandard);
+        const goldStandardWebSources = rawWebSources.filter(s => s.goldStandard);
+
+        log.info('RESEARCH', `Fetched — OA:${openAlexSources.length} SS:${semanticSources.length} Ax:${arxivSources.length} Web:${recentWebSources.length} Gold:${goldStandardWebSources.length}`);
+
+        // ── 5. Merge & deduplicate ────────────────────────────────────────────
+        await progress('analyzing', 'Merging and deduplicating sources...');
+        let allSources = researchIntelligenceService.dedupeSources([
+            ...reusableSources,
+            ...localSources,
+            ...openAlexSources,
+            ...semanticSources,
+            ...arxivSources,
+            ...recentWebSources,
+            ...goldStandardWebSources,
+        ]);
+
+        if (allSources.length === 0) {
+            const msg = 'Research aborted: no sources retrieved from any provider.';
+            log.warn('AI', msg);
+            await progress('error', msg);
+            throw new Error(msg);
+        }
+
+        // ── 6. Credibility scoring ────────────────────────────────────────────
+        await progress('evaluating', 'Evaluating source credibility...', { sourceData: allSources });
+        allSources.forEach((source, index) => {
+            try {
+                source.citationIndex = index + 1;
+                const assessment = sourceCredibilityService.evaluateSourceCredibility(source, allSources);
+                source.credibilityScore  = assessment.credibilityScore;
+                source.credibilityReason = assessment.reason;
+            } catch (_) {
+                source.credibilityScore = 50;
+            }
+        });
+
+        // ── 7. Corpus evaluation + adaptive fallback ladder ───────────────────
+        let retrievalMode = 'default';
+        let fallbackStage = 0;
+        let thresholds = researchIntelligenceService.getAdaptiveThresholds(0);
+
+        let evaluatedSources = researchIntelligenceService.evaluateCorpus(allSources, {
+            query, dimensions: researchPlan.research_dimensions || [], thresholds
+        });
+        let validSources    = evaluatedSources.filter(s => s.sourceValidation?.passesThreshold);
+        let selectedSources = researchIntelligenceService.selectTopSourcesWithBalance(validSources, researchConfig);
+        let sufficiency     = researchIntelligenceService.computeSufficiencyMetrics(selectedSources, researchConfig);
+
+        log.info('RESEARCH', `Initial evidence: total=${sufficiency.total}/${researchConfig.target_source_count} academic=${sufficiency.academicTotal} empirical=${sufficiency.empiricalTotal}`);
+
+        // Fallback ladder
+        const counterQueries       = (researchPlan.counter_evidence_queries || []).slice(0, 6);
         const domainExpansionQueries = [
             `${query} arxiv`,
             `${query} government policy report`,
@@ -224,284 +293,218 @@ const deepResearchOrchestrator = {
             `${query} technical benchmark report`
         ];
 
-        if (onProgress) onProgress({ phase: 'searching_online', message: `Running expanded retrieval (${expandedQueries.length} analytical queries)...` });
-
-        let onlineSources = [];
-        try {
-            const onlineStart = Date.now();
-            onlineSources = await retrieveSourcesForQuerySet(expandedQueries, { academicPerQuery: 2, webPerQuery: 2 });
-            perf.addTool(Date.now() - onlineStart);
-        } catch (onlineError) {
-            log.error('AI', `Online search failed: ${onlineError.message}`);
-        }
-
-        if (onProgress) onProgress({ phase: 'analyzing', message: 'Processing Documents...' });
-
-        // 3/4. Merge, credibility scoring, and validation scoring
-        let allSources = researchIntelligenceService.dedupeSources([...reusableValidatedSources, ...localSources, ...onlineSources]);
-
-        if (allSources.length === 0) {
-            log.warn('AI', "No sources retrieved from local/online.");
-            if (onProgress) onProgress({ phase: 'error', message: 'Research aborted due to insufficient material. No functional online sources found.' });
-            throw new Error("Research aborted due to insufficient material.");
-        }
-
-        // Credibility scoring
-        if (onProgress) onProgress({ phase: 'evaluating', message: 'Evaluating Source Credibility...', sourceData: allSources });
-        allSources.forEach((source, index) => {
-            try {
-                source.citationIndex = index + 1;
-                const assessment = sourceCredibilityService.evaluateSourceCredibility(source, allSources);
-                source.credibilityScore = assessment.credibilityScore;
-                source.credibilityReason = assessment.reason;
-            } catch (credErr) {
-                source.credibilityScore = 50;
-            }
-        });
-
-        // Validation scoring against relevance/domain/evidence thresholds (Level 0: default)
-        let retrievalMode = 'default';
-        let fallbackStage = 0;
-        let thresholds = researchIntelligenceService.getAdaptiveThresholds(0);
-
-        let evaluatedSources = researchIntelligenceService.evaluateCorpus(allSources, {
-            query,
-            dimensions: researchPlan.research_dimensions || [],
-            thresholds
-        });
-        let validSources = evaluatedSources.filter(source => source.sourceValidation?.passesThreshold);
-        let selectedSources = researchIntelligenceService.selectTopSourcesWithBalance(validSources, researchConfig);
-        let sufficiency = researchIntelligenceService.computeSufficiencyMetrics(selectedSources, researchConfig);
-        log.info('RESEARCH', `Evidence metrics (initial): total=${sufficiency.total}, empirical=${sufficiency.empiricalTotal}, academic=${sufficiency.academicTotal}, industry=${sufficiency.industryOrReportTotal}, counter=${sufficiency.counterPosition}`);
-
-        // Fallback ladder (non-blocking unless zero sources)
         while (researchConfig.allow_adaptive_fallback && !researchIntelligenceService.hasSufficientEvidence(sufficiency) && fallbackStage < 4) {
-            fallbackStage += 1;
-
+            fallbackStage++;
             if (fallbackStage === 1) {
                 retrievalMode = 'adaptive';
                 const recoveryQueries = researchIntelligenceService.buildRecoveryQueries(query, sufficiency);
-                const secondPassQueries = [...counterQueries, ...recoveryQueries].slice(0, 8);
-
-                if (secondPassQueries.length > 0) {
-                    if (onProgress) onProgress({ phase: 'searching_online', message: 'Adaptive retrieval L1: expanding semantic queries...' });
-                    const recoverySources = await retrieveSourcesForQuerySet(secondPassQueries, { academicPerQuery: 2, webPerQuery: 2 });
-                    allSources = researchIntelligenceService.dedupeSources([...allSources, ...recoverySources]);
+                const secondPass = [...counterQueries, ...recoveryQueries].slice(0, 8);
+                if (secondPass.length > 0) {
+                    await progress('searching_online', 'Adaptive retrieval L1: expanding semantic queries...');
+                    const [r1, r2] = await Promise.allSettled([
+                        academicSourceService.fetchOpenAlexBatch(secondPass, 4),
+                        academicSourceService.fetchSemanticBatch(secondPass, 3),
+                    ]);
+                    const extra = [...(r1.status==='fulfilled'?r1.value:[]), ...(r2.status==='fulfilled'?r2.value:[])];
+                    allSources = researchIntelligenceService.dedupeSources([...allSources, ...extra]);
                 }
             }
-
             if (fallbackStage === 2) {
                 retrievalMode = 'adaptive';
-                if (onProgress) onProgress({ phase: 'searching_online', message: 'Adaptive retrieval L2: expanding domains (arXiv/industry/policy reports)...' });
-                const domainSources = await retrieveSourcesForQuerySet(domainExpansionQueries, { academicPerQuery: 2, webPerQuery: 2 });
-                allSources = researchIntelligenceService.dedupeSources([...allSources, ...domainSources]);
+                await progress('searching_online', 'Adaptive retrieval L2: domain expansion (ArXiv / industry / policy)...');
+                const domSources = await academicSourceService.fetchArxivBatch(domainExpansionQueries, 4);
+                allSources = researchIntelligenceService.dedupeSources([...allSources, ...domSources]);
             }
-
             if (fallbackStage === 3) {
                 retrievalMode = 'fallback';
                 thresholds = researchIntelligenceService.getAdaptiveThresholds(3);
-                if (onProgress) onProgress({ phase: 'searching_online', message: 'Adaptive retrieval L3: accepting near-match evidence with lower-confidence tagging...' });
+                await progress('searching_online', 'Adaptive retrieval L3: lowered evidence thresholds...');
             }
-
             if (fallbackStage >= 4) {
                 retrievalMode = 'fallback';
-                if (onProgress) onProgress({ phase: 'searching_online', message: 'Adaptive retrieval L4: controlled proceed mode enabled with available evidence.' });
+                await progress('searching_online', 'Adaptive retrieval L4: proceeding with best available evidence.');
                 break;
             }
 
-            // Re-score credibility for newly merged sources
             allSources.forEach((source, index) => {
                 if (source.credibilityScore != null) return;
                 source.citationIndex = index + 1;
                 const assessment = sourceCredibilityService.evaluateSourceCredibility(source, allSources);
-                source.credibilityScore = assessment.credibilityScore;
+                source.credibilityScore  = assessment.credibilityScore;
                 source.credibilityReason = assessment.reason;
             });
-
             evaluatedSources = researchIntelligenceService.evaluateCorpus(allSources, {
-                query,
-                dimensions: researchPlan.research_dimensions || [],
-                thresholds
+                query, dimensions: researchPlan.research_dimensions || [], thresholds
             });
-
-            validSources = evaluatedSources.filter(source => source.sourceValidation?.passesThreshold);
+            validSources    = evaluatedSources.filter(s => s.sourceValidation?.passesThreshold);
             selectedSources = researchIntelligenceService.selectTopSourcesWithBalance(validSources, researchConfig);
             if (thresholds.label === 'fallback_near_match') {
                 selectedSources = selectedSources.map(s => ({ ...s, lowerConfidenceEvidence: true }));
             }
             sufficiency = researchIntelligenceService.computeSufficiencyMetrics(selectedSources, researchConfig);
-            log.info('RESEARCH', `Evidence metrics (fallback L${fallbackStage}): total=${sufficiency.total}, empirical=${sufficiency.empiricalTotal}, academic=${sufficiency.academicTotal}, industry=${sufficiency.industryOrReportTotal}, counter=${sufficiency.counterPosition}`);
+            log.info('RESEARCH', `Evidence L${fallbackStage}: total=${sufficiency.total} academic=${sufficiency.academicTotal}`);
         }
 
-        // Controlled proceed mode: continue with partial evidence when non-zero sources exist
+        // Controlled proceed guards
         if (selectedSources.length === 0 && validSources.length > 0) {
-            selectedSources = validSources.slice(0, Math.min(researchConfig.target_source_count, validSources.length));
+            selectedSources = validSources.slice(0, researchConfig.target_source_count);
             retrievalMode = 'fallback';
             sufficiency = researchIntelligenceService.computeSufficiencyMetrics(selectedSources, researchConfig);
         }
-
-        // Final non-blocking guard: if validation pipeline is too strict, proceed with best available retrieved sources.
         if (selectedSources.length === 0 && allSources.length > 0) {
-            const broadEvaluated = researchIntelligenceService.evaluateCorpus(allSources, {
-                query,
-                dimensions: researchPlan.research_dimensions || [],
+            const broadEval = researchIntelligenceService.evaluateCorpus(allSources, {
+                query, dimensions: researchPlan.research_dimensions || [],
                 thresholds: { relevance: 0.45, domainAlignment: 0.4, includeNearMatch: true }
             });
-
-            selectedSources = broadEvaluated
+            selectedSources = broadEval
                 .sort((a, b) => (b.source_score || 0) - (a.source_score || 0))
-                .slice(0, Math.min(researchConfig.target_source_count, broadEvaluated.length))
-                .map(source => ({ ...source, lowerConfidenceEvidence: true }));
-
+                .slice(0, researchConfig.target_source_count)
+                .map(s => ({ ...s, lowerConfidenceEvidence: true }));
             retrievalMode = 'fallback';
             sufficiency = researchIntelligenceService.computeSufficiencyMetrics(selectedSources, researchConfig);
         }
-
         if (selectedSources.length === 0) {
-            const message = 'Research aborted because zero usable sources were retrieved after adaptive fallback.';
-            log.warn('AI', message);
-            if (onProgress) onProgress({ phase: 'error', message });
-            throw new Error(message);
+            const msg = 'Research aborted: zero usable sources after adaptive fallback.';
+            log.warn('AI', msg);
+            await progress('error', msg);
+            throw new Error(msg);
         }
 
-        // 6b. Citation Enrichment
-        if (onProgress) onProgress({ phase: 'enriching', message: 'Enriching Citation Metadata...', sourceData: selectedSources });
+        // ── 8. Citation Enrichment ────────────────────────────────────────────
+        await progress('enriching', 'Enriching citation metadata...', { sourceData: selectedSources });
         try {
-            const enrichStart = Date.now();
-            const enrichedSources = await citationEnrichmentService.enrichSources(selectedSources);
+            const enrichStart   = Date.now();
+            const enriched      = await citationEnrichmentService.enrichSources(selectedSources);
             perf.addTool(Date.now() - enrichStart);
             selectedSources.length = 0;
-            selectedSources.push(...enrichedSources);
-
-            const completeness = citationEnrichmentService.calculateMetadataCompleteness(selectedSources);
+            selectedSources.push(...enriched);
+            const completeness  = citationEnrichmentService.calculateMetadataCompleteness(selectedSources);
             if (completeness < 70) {
-                const retryEnriched = await citationEnrichmentService.enrichSources(selectedSources);
+                const retry = await citationEnrichmentService.enrichSources(selectedSources);
                 selectedSources.length = 0;
-                selectedSources.push(...retryEnriched);
+                selectedSources.push(...retry);
             }
         } catch (enrichErr) {
             log.warn('AI', `Citation enrichment partial: ${enrichErr.message}`);
         }
 
-        selectedSources.sort((a, b) => {
-            const aScore = (a.source_score || ((a.credibilityScore || 0) / 100));
-            const bScore = (b.source_score || ((b.credibilityScore || 0) / 100));
-            return bScore - aScore;
-        });
+        selectedSources.sort((a, b) => (b.source_score || ((b.credibilityScore||0)/100)) - (a.source_score || ((a.credibilityScore||0)/100)));
 
         const topSources = selectedSources.slice(0, researchConfig.target_source_count);
 
-        if (onProgress) onProgress({ phase: 'graphing', message: 'Constructing Document Citation Graph...', sourceData: topSources });
+        // ── 9. Citation graph + fact-check ────────────────────────────────────
+        await progress('graphing', 'Constructing citation graph...', { sourceData: topSources });
         const graphData = citationGraphService.buildGraph(topSources);
 
-        if (onProgress) onProgress({ phase: 'verifying', message: 'Extracting mechanisms and counter-evidence units...', sourceData: topSources });
-        const verifyStart = Date.now();
-        const verificationData = await factCheckingService.verifyCorpusClaims(topSources, query, options.userId);
+        await progress('verifying', 'Extracting mechanisms and counter-evidence...', { sourceData: topSources });
+        const verifyStart       = Date.now();
+        const verificationData  = await factCheckingService.verifyCorpusClaims(topSources, query, options.userId);
         perf.addLlm(Date.now() - verifyStart);
 
         const confidenceMetrics = researchIntelligenceService.computeConfidenceMetrics({
-            sources: topSources,
-            evidenceUnits: verificationData,
-            sufficiencyMetrics: sufficiency,
-            researchConfig,
-            retrievalMode
+            sources: topSources, evidenceUnits: verificationData,
+            sufficiencyMetrics: sufficiency, researchConfig, retrievalMode
         });
 
-        const academicSources = topSources.filter(s => s.sourceType === 'academic');
-        const webSources = topSources.filter(s => s.sourceType === 'web');
+        // ── 10. Build provider breakdown for evidence profile ─────────────────
+        const providerBreakdown = {
+            openAlex:       topSources.filter(s => s.sourceProvider === 'openalex').length,
+            semanticScholar: topSources.filter(s => s.sourceProvider === 'semantic_scholar').length,
+            arxiv:          topSources.filter(s => s.sourceProvider === 'arxiv').length,
+            web:            topSources.filter(s => s.sourceType !== 'academic' && s.sourceType !== 'local' && !s.goldStandard).length,
+            goldStandard:   topSources.filter(s => s.goldStandard).length,
+            local:          topSources.filter(s => s.sourceType === 'local').length,
+        };
+
+        const academicSources  = topSources.filter(s => s.sourceType === 'academic');
+        const webSourcesFinal  = topSources.filter(s => s.sourceType !== 'academic' && s.sourceType !== 'local');
         const empiricalSources = topSources.filter(s => s.evidenceCategory === 'empirical' || s.sourceType === 'academic' || s.sourceRole?.datasetOrSurvey || s.sourceRole?.empiricalAcademic);
-        const industrySources = topSources.filter(s => s.sourceRole?.industryFinancial || s.sourceRole?.policyGovReport);
-        const counterSources = topSources.filter(s => s.sourceRole?.counterPosition);
+        const industrySources  = topSources.filter(s => s.sourceRole?.industryFinancial || s.sourceRole?.policyGovReport);
+        const counterSources   = topSources.filter(s => s.sourceRole?.counterPosition);
 
         const evidenceProfile = {
-            totalSourcesUsed: topSources.length,
-            empiricalSources: empiricalSources.length,
-            industrySources: industrySources.length,
+            totalSourcesUsed:       topSources.length,
+            empiricalSources:       empiricalSources.length,
+            industrySources:        industrySources.length,
             counterEvidenceSources: counterSources.length,
-            retrievalMode: retrievalMode === 'default' ? 'Default' : (retrievalMode === 'adaptive' ? 'Adaptive' : 'Fallback')
+            retrievalMode:          retrievalMode === 'default' ? 'Default' : (retrievalMode === 'adaptive' ? 'Adaptive' : 'Fallback'),
+            providerBreakdown,
+            goldStandardCount:      providerBreakdown.goldStandard,
+            nature:                 researchConfig.nature,
+            depth:                  researchConfig.depth,
         };
 
         const researchResult = {
-            query,
-            userId: options.userId,
-            normalizedQuery,
+            query, userId: options.userId, normalizedQuery,
             mode: evidenceProfile.retrievalMode,
             sources: topSources,
-            localSourceCount: localSources.length,
-            onlineSourceCount: academicSources.length + webSources.length,
+            localSourceCount:  topSources.filter(s => s.sourceType === 'local').length,
+            onlineSourceCount: academicSources.length + webSourcesFinal.length,
             overallConfidenceScore: confidenceMetrics.overallConfidenceScore,
             createdAt: new Date(),
             plan: researchPlan,
-            citationGraphData: graphData,
-            verifiedClaimsData: verificationData,
-            evidenceSufficiency: sufficiency,
+            citationGraphData:    graphData,
+            verifiedClaimsData:   verificationData,
+            evidenceSufficiency:  sufficiency,
             confidenceMetrics,
             researchConfig,
-            evidenceProfile
+            evidenceProfile,
+            providerBreakdown,
         };
 
         researchIntelligenceService.registerValidatedSources(query, topSources);
 
-        if (onProgress) onProgress({ phase: 'synthesizing', message: 'Drafting Final Academic Report...' });
-        // log.info('AI', "Synthesizing research report...");
-
+        // ── 11. Synthesis ─────────────────────────────────────────────────────
+        await progress('synthesizing', `Drafting ${researchConfig.targetPages?.[0]}–${researchConfig.targetPages?.[1]} page report (${researchConfig.targetSections} sections)...`);
         const synthesisStart = Date.now();
         const finalReport = await researchSynthesisService.generateResearchReport(
             { ...researchResult, plan: researchPlan },
-            (token) => {
-                if (onProgress) onProgress({ phase: 'token', content: token });
-            }
+            (token) => { if (onProgress) onProgress({ phase: 'token', content: token }); }
         );
         perf.addLlm(Date.now() - synthesisStart);
 
-        // 10. Save to History
+        // ── 12. Save ──────────────────────────────────────────────────────────
+        let savedDoc = null;
         try {
             const dbWriteStart = Date.now();
             const cachePayload = { ...researchResult, researchReport: finalReport, title: query };
-            await ResearchCache.create(cachePayload);
+            savedDoc = await ResearchCache.create(cachePayload);
             perf.addDb(Date.now() - dbWriteStart);
-            log.success('SYSTEM', `Deep research session saved: "${query}"`);
+            log.success('SYSTEM', `Research saved (${topSources.length} sources): "${query}"`);
         } catch (cacheError) {
             log.error('SYSTEM', `Failed to save research: ${cacheError.message}`);
         }
 
-        const finalResponse = {
-            researchBundle: researchResult,
-            researchReport: finalReport
-        };
+        const finalResponse = { researchBundle: researchResult, researchReport: finalReport, savedDocId: savedDoc?._id };
 
-        if (onProgress) {
-            onProgress({
-                phase: 'completed',
-                message: 'Research Complete.',
-                fullReport: finalReport,
-                metaData: {
-                    retrievalMode: researchResult.mode,
-                    totalSources: researchResult.sources?.length || 0,
-                    academicSources: academicSources.length,
-                    webSources: webSources.length,
-                    confidenceScore: researchResult.overallConfidenceScore,
-                    confidenceExplanation: confidenceMetrics.explanation,
-                    evidenceProfile
-                },
-                sourceData: researchResult.sources,
-                graphData: researchResult.citationGraphData
-            });
-        }
+        await progress('completed', 'Research complete.', {
+            fullReport: finalReport,
+            metaData: {
+                retrievalMode: researchResult.mode,
+                totalSources:  researchResult.sources?.length || 0,
+                academicSources: academicSources.length,
+                webSources:      webSourcesFinal.length,
+                confidenceScore: researchResult.overallConfidenceScore,
+                confidenceExplanation: confidenceMetrics.explanation,
+                evidenceProfile,
+                providerBreakdown,
+                nature: researchConfig.nature,
+                depth:  researchConfig.depth,
+            },
+            sourceData: researchResult.sources,
+            graphData:  researchResult.citationGraphData,
+        });
 
         const duration = Date.now() - startTime;
         const diagnostics = perf.toLogPayload({
             branchCount: 1,
-            toolCalls: expandedQueries.length,
+            toolCalls:   (querySets.openalex.length + querySets.semantic.length + querySets.arxiv.length + querySets.web.length),
             tokenUsageEstimate: Math.ceil(String(finalReport?.fullReport || finalReport?.summary || '').length / 4),
         });
         logPerformance(diagnostics);
-        log.success('AI', `Research synthesis complete (${topSources.length} qualified sources, ${duration}ms)`);
+        log.success('AI', `Research complete: ${topSources.length} sources, ${duration}ms [${researchConfig.nature}/${researchConfig.depth}]`);
 
-        return {
-            ...finalResponse,
-            performanceDiagnostics: diagnostics,
-        };
+        return { ...finalResponse, performanceDiagnostics: diagnostics };
     }
 };
 

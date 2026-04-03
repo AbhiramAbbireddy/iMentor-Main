@@ -1,7 +1,7 @@
 // tests/e2e/helpers/chat-helpers.js
 // Shared chat interaction helpers for E2E tests
 
-const BASE_API = 'http://localhost:5001/api';
+const BASE_API = 'http://localhost:5005/api';
 
 /* ─── Selectors ────────────────────────────────────────────────────── */
 

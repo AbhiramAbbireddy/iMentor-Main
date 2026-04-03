@@ -224,6 +224,50 @@ def bootstrap(
             output_root=output_root,
         )
 
+    # ── Step 3C: Per-subtopic lecture generation ──────────────────────────
+    # Generate one lecture note (definition + intuition + diagram + math +
+    # examples) per syllabus subtopic.  Uses LLM + cached STN data.
+    # Results are written to course_bootstrap/{course}/lecture_notes/subtopics/
+    # so the RAG /curriculum/{course}/lecture/{subtopic_id} endpoint is instant.
+    if not skip_rag and syllabus:
+        print("\n✏️   Pipeline C — Per-subtopic lecture notes …", flush=True)
+        try:
+            import sys as _sys, os as _os, re as _re
+            _rag_service_dir = _os.path.join(_os.path.dirname(__file__), "server", "rag_service")
+            if _rag_service_dir not in _sys.path:
+                _sys.path.insert(0, _rag_service_dir)
+            import subtopic_lecture_generator as _slg
+
+            def _to_id(name: str) -> str:
+                """Convert subtopic display name to id (mirrors curriculum_graph_handler)."""
+                s = name.lower().strip()
+                s = _re.sub(r"[^a-z0-9\s_]", "", s)
+                s = _re.sub(r"[\s]+", "_", s)
+                return s
+
+            # Build flat subtopic list from syllabus entries
+            subtopics_flat = []
+            for entry in syllabus.entries:
+                topic_name = entry.topic or ""
+                for sub_name in entry.subtopics:
+                    sub_name = sub_name.strip()
+                    if not sub_name:
+                        continue
+                    subtopics_flat.append({
+                        "id":         _to_id(sub_name),
+                        "name":       sub_name,
+                        "topic_name": topic_name,
+                    })
+
+            if subtopics_flat:
+                print(f"    Generating for {len(subtopics_flat)} subtopics …", flush=True)
+                _slg.generate_all_subtopic_lectures(course_name, subtopics_flat)
+                print("    ✓  Per-subtopic lectures done", flush=True)
+            else:
+                print("    ⚠  No subtopics found in syllabus — skipping", flush=True)
+        except Exception as _e:
+            print(f"    ⚠  Per-subtopic lecture generation failed: {_e}", flush=True)
+
     elapsed = time.time() - t_start
     print(f"\n{'='*60}")
     print(f"  Bootstrap complete in {elapsed:.0f}s")

@@ -6,83 +6,71 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the primary purpose of logistic regression in binary classification?",
+      "question": "What is the primary purpose of logistic regression in the context of binary classification?",
       "options": [
-        "A) To find the linear decision boundary.",
-        "B) To predict the probability of the input belonging to one class.",
-        "C) To minimize the error rate of the classifier.",
-        "D) To classify data into more than two categories."
+        "A) To predict the exact numerical value of the outcome.",
+        "B) To classify data into two categories based on input features.",
+        "C) To calculate the mean of the input features.",
+        "D) To find the correlation between input features and the outcome."
       ],
       "correct_option": "B",
-      "explanation": "Logistic regression uses the logistic function to predict the probability of the input belonging to one of the classes, which is the primary purpose in binary classification.",
+      "explanation": "Logistic regression is used to classify data into two categories based on input features, making it a fundamental tool for binary classification.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is a key assumption of logistic regression?",
+      "question": "Which of the following best describes the logistic function used in logistic regression?",
       "options": [
-        "A) The data is linearly separable.",
-        "B) The relationship between input features and the output is linear.",
-        "C) The output is a continuous variable.",
-        "D) The output is binary.",
-        "E) The error terms are normally distributed."
+        "A) $f(x) = x^2$",
+        "B) $f(x) = \frac{1}{1 + e^{-x}}$",
+        "C) $f(x) = \\sin(x)$",
+        "D) $f(x) = \\log(x)$"
       ],
-      "correct_option": "D",
-      "explanation": "The key assumption of logistic regression is that the output is binary, which is essential for binary classification.",
+      "correct_option": "B",
+      "explanation": "The logistic function is defined as $f(x) = \frac{1}{1 + e^{-x}}$, which maps any real-valued number into the range [0, 1].",
       "difficulty": "intermediate",
       "bloom_level": "understand"
     },
     {
       "id": "mcq_3",
-      "question": "In logistic regression, what does the logistic function (sigmoid function) do?",
+      "question": "In logistic regression, what does the coefficient of an input feature represent?",
       "options": [
-        "A) It transforms the input features into a linear combination.",
-        "B) It maps the input features to a higher-dimensional space.",
-        "C) It converts the output probability into a binary decision.",
-        "D) It normalizes the input features.",
-        "E) It applies a threshold to the output probability.",
-        "F) It calculates the error between the predicted and actual values."
+        "A) The probability of the positive class.",
+        "B) The change in the probability of the positive class for a one-unit increase in the input feature.",
+        "C) The mean of the input feature.",
+        "D) The correlation between the input feature and the output."
       ],
-      "correct_option": "C",
-      "explanation": "The logistic function (sigmoid function) converts the output probability into a binary decision by mapping the input to a range of [0, 1].",
+      "correct_option": "B",
+      "explanation": "The coefficient of an input feature in logistic regression represents the change in the log-odds of the positive class for a one-unit increase in the input feature.",
       "difficulty": "intermediate",
       "bloom_level": "understand"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following best describes the role of the intercept term in logistic regression?",
+      "question": "Which of the following scenarios is most appropriate for using logistic regression?",
       "options": [
-        "A) It represents the slope of the decision boundary.",
-        "B) It adjusts the position of the decision boundary.",
-        "C) It normalizes the input features.",
-        "D) It calculates the error rate of the model.",
-        "E) It determines the number of classes.",
-        "F) It scales the output probability.",
-        "G) It represents the mean of the input features."
+        "A) Predicting the exact temperature tomorrow.",
+        "B) Classifying emails as spam or not spam.",
+        "C) Calculating the average income of a country.",
+        "D) Finding the distance between two points on a map."
       ],
       "correct_option": "B",
-      "explanation": "The intercept term in logistic regression adjusts the position of the decision boundary, allowing the model to fit the data better.",
+      "explanation": "Logistic regression is suitable for scenarios where the goal is to classify data into two categories, such as spam detection in emails.",
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_5",
-      "question": "What is the main advantage of using logistic regression over other classification algorithms in binary classification tasks?",
+      "question": "What is the main advantage of using logistic regression over other classification algorithms?",
       "options": [
-        "A) It can handle non-linear relationships.",
-        "B) It provides probabilistic outputs.",
-        "C) It is computationally expensive.",
-        "D) It requires large datasets.",
-        "E) It is prone to overfitting.",
-        "F) It is easy to interpret and understand.",
-        "G) It is less accurate than other models.",
-        "H) It is less robust to outliers.",
-        "I) It is more complex to implement.",
-        "J) It is less flexible in handling different types of data."
+        "A) It can handle multiple classes.",
+        "B) It provides a probability estimate for the positive class.",
+        "C) It is the fastest algorithm.",
+        "D) It requires no training data."
       ],
       "correct_option": "B",
-      "explanation": "The main advantage of logistic regression in binary classification tasks is that it provides probabilistic outputs, which can be useful for understanding the confidence of the predictions.",
+      "explanation": "One of the main advantages of logistic regression is that it provides a probability estimate for the positive class, which can be interpreted as a risk level.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
     }
@@ -90,72 +78,73 @@
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the role of the logistic function in logistic regression and how it helps in making predictions.",
-      "model_answer": "The logistic function, also known as the sigmoid function, is used in logistic regression to map the input features to a probability value between 0 and 1. This function transforms the linear combination of the input features and the model parameters into a probability, which can be interpreted as the likelihood of the input belonging to a certain class. By applying the logistic function, logistic regression can make probabilistic predictions, which are essential for understanding the confidence of the model's output.",
+      "question": "Explain the role of the logistic function in logistic regression.",
+      "model_answer": "The logistic function, $f(x) = \frac{1}{1 + e^{-x}}$, is used in logistic regression to map the linear combination of input features into a probability value between 0 and 1. This allows us to interpret the output as the probability of the positive class.",
       "key_concepts": [
         "logistic function",
-        "sigmoid function",
-        "probability"
+        "probability",
+        "binary classification"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Discuss the importance of the decision boundary in logistic regression and how it is determined.",
-      "model_answer": "The decision boundary in logistic regression is crucial as it separates the two classes. It is determined by the logistic function, which maps the input features to a probability. The decision boundary is essentially the point where the probability is 0.5, indicating that the input is equally likely to belong to either class. By optimizing the parameters of the logistic function, the model can find the best decision boundary that maximizes the separation between the classes.",
+      "question": "Describe how logistic regression can be used in a real-world scenario, such as medical diagnosis.",
+      "model_answer": "In a medical diagnosis scenario, logistic regression can be used to predict the likelihood of a patient having a disease based on their symptoms. The model would take the patient's symptoms as input features and output a probability of the patient having the disease. This probability can be interpreted as a risk level, helping doctors make informed decisions.",
       "key_concepts": [
-        "decision boundary",
-        "logistic function",
-        "probability"
+        "medical diagnosis",
+        "symptoms",
+        "probability",
+        "risk level"
       ],
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "apply"
     },
     {
       "id": "sa_3",
-      "question": "Compare and contrast logistic regression with a linear regression model in the context of binary classification.",
-      "model_answer": "Logistic regression and linear regression differ in their primary objectives and the nature of their outputs. Linear regression is used for predicting a continuous output, whereas logistic regression is specifically designed for binary classification tasks. While linear regression can be adapted for binary classification by applying a threshold to the output, logistic regression provides a more direct and probabilistic approach. Logistic regression uses the logistic function to map the input features to a probability, which can be interpreted as the likelihood of the input belonging to a certain class. This makes logistic regression more suitable for binary classification tasks, as it provides a clear and interpretable output.",
+      "question": "Compare logistic regression with a linear regression model in the context of binary classification.",
+      "model_answer": "While linear regression can be used for binary classification by applying a threshold to the output, it does not provide a probability estimate. Logistic regression, on the other hand, uses the logistic function to map the linear combination of input features into a probability between 0 and 1. This makes logistic regression more suitable for binary classification tasks as it provides a direct probability estimate.",
       "key_concepts": [
-        "logistic regression",
         "linear regression",
-        "binary classification",
-        "probability"
+        "logistic regression",
+        "probability estimate",
+        "threshold"
       ],
       "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "bloom_level": "analyse"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
-      "front": "Logistic Function",
-      "back": "The logistic function, also known as the sigmoid function, is defined as $f(x) = \\frac{1}{1 + e^{-x}}$. It maps any real-valued number into the range [0, 1], representing the probability of the input belonging to one of the classes.",
-      "hint": "Think of it as a smooth, S-shaped curve."
+      "front": "Binary Classification",
+      "back": "A type of supervised learning problem where the output can take only two possible values, typically represented as 0 and 1 or false and true.",
+      "hint": "Think of it as a yes/no question."
     },
     {
       "id": "fc_2",
-      "front": "Decision Boundary",
-      "back": "In logistic regression, the decision boundary is the point where the logistic function output is 0.5, indicating that the input is equally likely to belong to either class. It is determined by the logistic function and the model parameters.",
-      "hint": "It's the line that separates the two classes."
+      "front": "Logistic Function",
+      "back": "$f(x) = \frac{1}{1 + e^{-x}}$, a function that maps any real-valued number into the range [0, 1], often used in logistic regression to estimate the probability of the positive class.",
+      "hint": "It's the S-shaped curve."
     },
     {
       "id": "fc_3",
-      "front": "Intercept Term",
-      "back": "The intercept term in logistic regression is a parameter that adjusts the position of the decision boundary. It represents the value of the logistic function when all input features are zero.",
-      "hint": "It shifts the curve horizontally."
+      "front": "Coefficient",
+      "back": "In logistic regression, the coefficient of an input feature represents the change in the log-odds of the positive class for a one-unit increase in the input feature.",
+      "hint": "It tells you how much the odds change."
     },
     {
       "id": "fc_4",
-      "front": "Binary Classification",
-      "back": "Binary classification is a type of supervised learning where the model predicts one of two possible outcomes. It is based on finding a decision boundary that separates the two classes.",
-      "hint": "Think of it as a yes/no or on/off decision."
+      "front": "Odds",
+      "back": "The ratio of the probability of an event occurring to the probability of it not occurring, often used in logistic regression to express the relationship between input features and the positive class.",
+      "hint": "Odds = Probability / (1 - Probability)"
     },
     {
       "id": "fc_5",
-      "front": "Probability",
-      "back": "In logistic regression, the probability of the input belonging to one of the classes is represented by the output of the logistic function. It is a value between 0 and 1, indicating the likelihood of the input being in that class.",
-      "hint": "It's the confidence of the prediction."
+      "front": "Risk Level",
+      "back": "In the context of logistic regression, the probability of the positive class can be interpreted as a risk level, which can be used to make decisions in various applications, such as medical diagnosis or financial risk assessment.",
+      "hint": "It's the probability of the event happening."
     }
   ],
   "topic_id": "logistic_regression"

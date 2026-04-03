@@ -6,80 +6,80 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the primary goal of Machine Learning?",
+      "question": "What is the primary focus of Machine Learning?",
       "options": [
-        "A) To create algorithms that can learn from data and improve performance.",
-        "B) To write explicit programming instructions for machines.",
-        "C) To automate data entry tasks.",
-        "D) To design user interfaces for software applications."
+        "A) Developing algorithms that can learn from data",
+        "B) Writing explicit programming rules for every scenario",
+        "C) Creating databases for storing data",
+        "D) Designing user interfaces for data visualization"
       ],
       "correct_option": "A",
-      "explanation": "The primary goal of Machine Learning is to develop algorithms that can learn from data and improve their performance over time, which aligns with the core concept of the field.",
+      "explanation": "Machine Learning focuses on developing algorithms that can learn from data, which is fundamentally different from traditional programming where rules are explicitly defined.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which type of Machine Learning involves training a model on labeled data to make predictions?",
+      "question": "Which of the following best describes supervised learning?",
+      "options": [
+        "A) Learning from data without any labels",
+        "B) Learning from data with labels to predict outcomes",
+        "C) Learning from data to identify patterns without labels",
+        "D) Learning from data to classify images"
+      ],
+      "correct_option": "B",
+      "explanation": "Supervised learning involves learning from labeled data to predict outcomes, making it the correct choice.",
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
+    },
+    {
+      "id": "mcq_3",
+      "question": "In which scenario would unsupervised learning be most appropriate?",
+      "options": [
+        "A) When the data is already labeled and we want to predict outcomes",
+        "B) When we want to classify images into predefined categories",
+        "C) When we want to identify patterns in unlabeled data",
+        "D) When we want to develop a user-friendly interface"
+      ],
+      "correct_option": "C",
+      "explanation": "Unsupervised learning is best suited for identifying patterns in unlabeled data, making it the correct choice.",
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
+    },
+    {
+      "id": "mcq_4",
+      "question": "What is the main advantage of using Machine Learning in healthcare?",
+      "options": [
+        "A) It can replace doctors",
+        "B) It can process and analyze large amounts of medical data to identify patterns and predict outcomes",
+        "C) It can create user-friendly interfaces for patients",
+        "D) It can store medical data securely"
+      ],
+      "correct_option": "B",
+      "explanation": "The main advantage of using Machine Learning in healthcare is its ability to process and analyze large amounts of medical data to identify patterns and predict outcomes, which is a key aspect of its application.",
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
+    },
+    {
+      "id": "mcq_5",
+      "question": "Which of the following is NOT a type of Machine Learning?",
       "options": [
         "A) Supervised Learning",
         "B) Unsupervised Learning",
         "C) Reinforcement Learning",
         "D) Deep Learning"
       ],
-      "correct_option": "A",
-      "explanation": "Supervised Learning involves training a model on labeled data to make predictions, which is a core concept in the field.",
-      "difficulty": "intermediate",
-      "bloom_level": "apply"
-    },
-    {
-      "id": "mcq_3",
-      "question": "What is the main difference between supervised and unsupervised learning?",
-      "options": [
-        "A) Supervised learning requires labeled data, while unsupervised learning does not.",
-        "B) Supervised learning is used for classification, while unsupervised learning is for regression.",
-        "C) Supervised learning is easier to implement, while unsupervised learning is more complex.",
-        "D) Supervised learning is for reinforcement tasks, while unsupervised learning is for prediction tasks."
-      ],
-      "correct_option": "A",
-      "explanation": "The main difference between supervised and unsupervised learning is that supervised learning requires labeled data, while unsupervised learning does not, which is a fundamental distinction in the field.",
-      "difficulty": "intermediate",
-      "bloom_level": "understand"
-    },
-    {
-      "id": "mcq_4",
-      "question": "Which of the following is NOT a type of Machine Learning?",
-      "options": [
-        "A) Supervised Learning",
-        "B) Unsupervised Learning",
-        "C) Reinforcement Learning",
-        "D) Artificial Intelligence"
-      ],
       "correct_option": "D",
-      "explanation": "Artificial Intelligence is a broader field that includes Machine Learning, but it is not a specific type of Machine Learning.",
+      "explanation": "While Deep Learning is a subset of Machine Learning, it is not a distinct type of Machine Learning on its own. The other options are all types of Machine Learning.",
       "difficulty": "advanced",
-      "bloom_level": "evaluate"
-    },
-    {
-      "id": "mcq_5",
-      "question": "In which scenario would you use reinforcement learning?",
-      "options": [
-        "A) When you need to classify images into categories.",
-        "B) When you want to cluster similar data points together.",
-        "C) When you want to train a model to make decisions in an environment to maximize a reward.",
-        "D) When you need to predict future stock prices based on historical data."
-      ],
-      "correct_option": "C",
-      "explanation": "Reinforcement learning is used to train models to make decisions in an environment to maximize a reward, which is a key application of the technique.",
-      "difficulty": "advanced",
-      "bloom_level": "create"
+      "bloom_level": "remember"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the difference between supervised and unsupervised learning in your own words.",
-      "model_answer": "Supervised learning involves training a model on labeled data, where each data point is associated with a label or output. The goal is to learn a mapping from inputs to outputs. In contrast, unsupervised learning deals with unlabeled data, and the goal is to find patterns or structure in the data without any predefined labels.",
+      "question": "Explain the difference between supervised and unsupervised learning.",
+      "model_answer": "Supervised learning involves training algorithms on labeled data to predict outcomes, whereas unsupervised learning involves identifying patterns in unlabeled data. The key difference lies in the availability of labeled data and the goal of the learning process.",
       "key_concepts": [
         "supervised learning",
         "unsupervised learning"
@@ -89,62 +89,57 @@
     },
     {
       "id": "sa_2",
-      "question": "Describe a real-world application of reinforcement learning.",
-      "model_answer": "A common application of reinforcement learning is in autonomous vehicles, where the vehicle learns to navigate and make decisions in real-time to maximize safety and efficiency. The vehicle receives feedback in the form of rewards or penalties based on its actions, and it learns to optimize its behavior over time.",
+      "question": "Discuss the importance of data quality and quantity in Machine Learning.",
+      "model_answer": "Data quality and quantity are crucial in Machine Learning because they directly impact the performance of the algorithms. High-quality data with accurate labels and sufficient quantity can lead to more accurate predictions and better model performance. Conversely, poor data quality and insufficient data can result in inaccurate models and unreliable predictions.",
       "key_concepts": [
-        "reinforcement learning",
-        "autonomous vehicles"
+        "data quality",
+        "data quantity"
       ],
       "difficulty": "advanced",
-      "bloom_level": "apply"
+      "bloom_level": "evaluate"
     },
     {
       "id": "sa_3",
-      "question": "Compare and contrast supervised and unsupervised learning in terms of their goals and methods.",
-      "model_answer": "Supervised learning aims to learn a mapping from inputs to outputs based on labeled data, while unsupervised learning seeks to discover hidden patterns or structure in the data without any predefined labels. Supervised learning typically involves classification or regression tasks, whereas unsupervised learning can involve clustering, dimensionality reduction, or anomaly detection. The methods used in supervised learning often involve training a model on labeled data, while unsupervised learning methods may involve algorithms like k-means clustering or principal component analysis.",
+      "question": "How does the scope of Machine Learning connect to the broader idea of data analysis?",
+      "model_answer": "The scope of Machine Learning is closely tied to the broader idea of data analysis because both involve extracting meaningful insights from data. Machine Learning algorithms can automatically learn from data to make predictions or identify patterns, which is a core aspect of data analysis. Understanding the scope of Machine Learning helps in grasping the potential and limitations of these algorithms in real-world scenarios, which is essential for effective data analysis.",
       "key_concepts": [
-        "supervised learning",
-        "unsupervised learning",
-        "classification",
-        "regression",
-        "clustering",
-        "dimensionality reduction",
-        "anomaly detection"
+        "data analysis",
+        "Machine Learning"
       ],
-      "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "Machine Learning",
-      "back": "A field of study that gives computers the ability to learn without being explicitly programmed. It involves developing algorithms that can learn from data and improve their performance over time.",
-      "hint": "Think of learning as a process of improvement."
+      "back": "A field of study that gives computers the ability to learn without being explicitly programmed. It involves developing algorithms that can learn from data to make predictions or identify patterns.",
+      "hint": "Think of learning from examples."
     },
     {
       "id": "fc_2",
       "front": "Supervised Learning",
-      "back": "A type of Machine Learning where the model is trained on labeled data, meaning each data point is associated with a label or output. The goal is to learn a mapping from inputs to outputs.",
-      "hint": "Labels are provided for training."
+      "back": "A type of Machine Learning where the algorithm learns from labeled data to predict outcomes. The goal is to map inputs to outputs based on example input-output pairs.",
+      "hint": "Learning from labeled examples."
     },
     {
       "id": "fc_3",
       "front": "Unsupervised Learning",
-      "back": "A type of Machine Learning where the model is trained on unlabeled data, and the goal is to find patterns or structure in the data without any predefined labels.",
-      "hint": "No labels are provided for training."
+      "back": "A type of Machine Learning where the algorithm identifies patterns in unlabeled data. The goal is to find hidden structures or groupings in the data.",
+      "hint": "Finding patterns in unlabelled data."
     },
     {
       "id": "fc_4",
-      "front": "Reinforcement Learning",
-      "back": "A type of Machine Learning where the model learns to make decisions in an environment to maximize a reward. The model receives feedback in the form of rewards or penalties based on its actions.",
-      "hint": "Learn by doing and getting feedback."
+      "front": "Data Quality",
+      "back": "The accuracy, completeness, and consistency of the data. High-quality data is essential for accurate predictions and reliable Machine Learning models.",
+      "hint": "Think of clean, well-labelled data."
     },
     {
       "id": "fc_5",
-      "front": "Labeled Data",
-      "back": "Data that includes both the input features and the corresponding output labels. Used in supervised learning to train models.",
-      "hint": "Includes both inputs and correct outputs."
+      "front": "Data Quantity",
+      "back": "The amount of data available for training Machine Learning models. More data can lead to better model performance, but the quality of the data is also crucial.",
+      "hint": "More is better, but quality matters too."
     }
   ],
   "topic_id": "introduction_to_machine_learning"

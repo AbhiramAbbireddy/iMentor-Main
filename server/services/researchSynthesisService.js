@@ -13,11 +13,22 @@ const researchSynthesisService = {
     const citationMap = citationEnrichmentService.buildCitationMapForLLM(enrichedSources);
     const sourceContext = citationEnrichmentService.buildSourceContextForLLM(enrichedSources);
 
+    // Determine section and page targets from researchConfig
+    const targetSections   = plan.researchConfig?.targetSections   || 7;
+    const targetPages      = plan.researchConfig?.targetPages      || [4, 5];
+    const minWordsPerSection = plan.researchConfig?.minWordsPerSection || 500;
+
     const planningPrompt = `
 You are a PhD-level research strategist planning an academic research report.
 
 RESEARCH TOPIC: "${query}"
 ACADEMIC TITLE: "${academicTitle}"
+
+REPORT SCALE REQUIREMENTS:
+- Target length: ${targetPages[0]}–${targetPages[1]} pages of dense analytical prose
+- Required sections: exactly ${targetSections} (not fewer)
+- Each section MUST be substantive: minimum ${minWordsPerSection} words of analytical content
+- This is a HIGH-FIDELITY research report, not a summary
 
 RESEARCH PLAN CONTEXT:
 - Research Dimensions: ${JSON.stringify(plan.research_dimensions || [])}
@@ -29,26 +40,30 @@ ${citationMap}
 ${sourceContext}
 
 YOUR TASK:
-Create a structured research report plan with:
-1. Executive summary key points
-2. 3-5 evidence-backed sections with clear titles
-3. Key points for each section (with citation references)
-4. Analytical insights to extract
+Create a structured research report plan with exactly ${targetSections} sections covering:
+1. Background & context
+2. Core mechanism analysis
+3. Empirical evidence review
+4. Quantitative signals and data
+5. Counter-evidence and limitations
+6. Implications (policy / practical / theoretical)
+7+ Further domain-specific dimensions as needed
 
 Output STRICT JSON:
 {
   "executiveSummaryPoints": {
-    "analyticalOverview": "Brief overview",
-    "primaryDriver": "Root mechanism",
-    "primaryContradiction": "Key tension",
-    "strongestInsight": "Main finding"
+    "analyticalOverview": "3-4 sentence analytical overview (not a teaser)",
+    "primaryDriver": "Root mechanism in one sentence",
+    "primaryContradiction": "Key tension or gap",
+    "strongestInsight": "The single most important finding"
   },
   "sections": [
     {
-      "title": "Section title",
-      "keyPoints": ["Point with [1] citation", "Another point [2][3]"],
-      "causalMechanism": "Underlying cause-effect",
-      "relevantSources": [1, 2, 3]
+      "title": "Specific section title",
+      "keyPoints": ["Detailed point with [N] citation", "Another analytical point [M][K]"],
+      "causalMechanism": "HOW and WHY this section's evidence matters",
+      "relevantSources": [1, 2, 3, 4, 5],
+      "targetWordCount": ${minWordsPerSection}
     }
   ],
   "structuralAnalysisRequired": true,
@@ -56,17 +71,18 @@ Output STRICT JSON:
 }
 
 CRITICAL RULES:
-1. Only include sections with strong source support
-2. Each key point MUST reference citations [N]
-3. Keep section count between 3-5
-4. Ensure no redundant sections
+1. Exactly ${targetSections} sections — no more, no fewer
+2. Every section must reference at least 3 distinct citations
+3. No section titles like "Introduction" or "Conclusion" — all must be substantive analytical headings
+4. Ensure counter-evidence appears in at least one dedicated section
+5. Quantitative signals (percentages, statistics, trends) must appear in at least 3 sections
 `;
 
     const planResponse = await LLMRouter.generate({
       query: planningPrompt,
       userId: userId,
       deepResearchContext: true,
-      systemPrompt: "You are a research strategist. Output strictly valid JSON. Plan evidence-backed sections."
+      systemPrompt: "You are a research strategist. Output strictly valid JSON. Plan evidence-backed sections with real analytical depth."
     });
 
     const jsonMatch = planResponse.match(/\{[\s\S]*\}/);
@@ -82,14 +98,16 @@ CRITICAL RULES:
       ? enrichedSources.filter(s => sectionPlan.relevantSources.includes(s.citationIndex))
       : enrichedSources;
 
-    const citationMap = citationEnrichmentService.buildCitationMapForLLM(relevantSources);
+    const citationMap   = citationEnrichmentService.buildCitationMapForLLM(relevantSources);
     const sourceContext = citationEnrichmentService.buildSourceContextForLLM(relevantSources);
+    const targetWords   = sectionPlan.targetWordCount || 600;
 
     const sectionPrompt = `
 RESEARCH TOPIC: "${query}"
 SECTION TITLE: "${sectionPlan.title}"
 SECTION KEY POINTS: ${JSON.stringify(sectionPlan.keyPoints)}
 CAUSAL MECHANISM: ${sectionPlan.causalMechanism}
+TARGET LENGTH: minimum ${targetWords} words of analytical prose for this section
 
 ${citationMap}
 
@@ -97,28 +115,30 @@ ${sourceContext}
 
 YOUR TASK:
 Write a comprehensive, evidence-backed section that:
-1. Expands each key point into analytical paragraphs
+1. Expands each key point into full analytical paragraphs (not bullet points)
 2. Cites every claim using [N] format
 3. Explains HOW and WHY, not just WHAT
-4. Includes quantitative signals where available
-5. Addresses mechanisms and causation
-6. Integrates counter-evidence if present
+4. Includes quantitative signals, statistics, and data where available
+5. Addresses mechanisms, causation, and second-order effects
+6. Integrates counter-evidence if present in the sources
+7. Uses academic prose throughout — no casual phrasing
 
 OUTPUT REQUIREMENTS:
-- Write 3-6 analytical paragraphs
+- Write ${Math.max(5, Math.ceil(targetWords / 120))}–${Math.max(8, Math.ceil(targetWords / 80))} analytical paragraphs
 - Every factual claim MUST have citations in [1], [2][3] format
-- Use causal language (drives, causes, leads to)
-- Include specific examples with citations
-- NO placeholder text or empty statements
+- Use causal language (drives, causes, leads to, results in, enables)
+- Include specific examples, statistics, or case evidence with citations
 - DO NOT add "References" heading or bibliography at the end
+- DO NOT use bullet points — flowing academic prose only
 
 FORBIDDEN PHRASES:
 - "Some sources suggest"
 - "It is widely believed"
 - "This is complex"
 - "References:" or "## References"
+- "In conclusion" (save conclusions for the final section)
 
-Write the section content as flowing prose with inline citations, NOT JSON. Citation format: [1], [2][3], etc.
+Write the section content as flowing academic prose with inline citations. DO NOT output JSON.
 `;
 
     const sectionContent = await LLMRouter.generate({
@@ -178,9 +198,10 @@ Write the section content as flowing prose with inline citations, NOT JSON. Cita
     const highQualitySources = sources.filter(s => (s.credibilityScore || 0) >= 40);
     const filteredSources = highQualitySources.length >= 5 ? highQualitySources : sources;
 
+    // Use all available sources — the Nature×Depth config already set the right count
     const sourcesToUse = filteredSources
       .sort((a, b) => (b.credibilityScore || 0) - (a.credibilityScore || 0))
-      .slice(0, Math.max(3, researchConfig.target_source_count || 5));
+      .slice(0, Math.max(10, researchConfig.target_source_count || 50));
 
     let enrichedSources;
     try {
@@ -209,7 +230,9 @@ Write the section content as flowing prose with inline citations, NOT JSON. Cita
     
     let researchPlan;
     try {
-      researchPlan = await this.generateResearchPlan(query, academicTitle, enrichedSources, plan, userId);
+      // Pass researchConfig so the planner knows section count + page targets
+      const planWithConfig = { ...plan, researchConfig };
+      researchPlan = await this.generateResearchPlan(query, academicTitle, enrichedSources, planWithConfig, userId);
       log.info('AI', `[Deep Research] Plan created: ${researchPlan.sections?.length || 0} sections`);
     } catch (planError) {
       log.error('AI', `Research planning failed: ${planError.message}`);

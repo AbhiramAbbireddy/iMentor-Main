@@ -593,7 +593,7 @@ RULES:
 
             <main className="flex-1 flex flex-col overflow-hidden pt-16 relative">
                 {/* Page Header - Minimal */}
-                <div className="bg-gray-900/95 border-b border-white/5 px-4 sm:px-6 py-2.5 flex items-center justify-between z-10">
+                <div className="bg-[#0d0d0d] border-b border-[#4a4a4a] px-4 sm:px-6 py-2.5 flex items-center justify-between z-10">
                     <div className="flex items-center gap-3">
                         {/* Back Button */}
                         <Link
@@ -651,7 +651,7 @@ RULES:
                             value={selectedSubject || ''}
                             onChange={(e) => setSelectedSubject(e.target.value || null)}
                             disabled={isLoadingSubjects}
-                            className="text-sm px-3 py-1.5 rounded-lg bg-gray-800/60 border border-white/10 text-white focus:outline-none cursor-pointer"
+                            className="text-sm px-3 py-1.5 rounded-md bg-[#1a1a1a] border border-[#4a4a4a] text-white focus:outline-none focus:border-[#666666] cursor-pointer shadow-[0_2px_4px_rgba(0,0,0,0.3)]"
                         >
                             {isLoadingSubjects ? (
                                 <option value="" className="bg-gray-800">Loading...</option>
@@ -714,7 +714,7 @@ RULES:
                             <div
                                 data-tutor-tour="roadmap-panel"
                                 style={{ width: 340 }}
-                                className="h-full border-l border-border-light dark:border-border-dark flex flex-col bg-surface-light dark:bg-surface-dark overflow-hidden flex-shrink-0 transition-all duration-300"
+                                className="h-full border-l border-[#4a4a4a] flex flex-col bg-[#1a1a1a] overflow-hidden flex-shrink-0 transition-all duration-300 shadow-[-4px_0_12px_rgba(0,0,0,0.3)]"
                             >
                                 {/* Tab Header */}
                                 <div className="flex-shrink-0 flex items-center p-1 bg-black/10 border-b border-white/5 mx-3 mt-3 rounded-lg">

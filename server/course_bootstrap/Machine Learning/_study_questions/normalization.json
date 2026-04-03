@@ -8,69 +8,69 @@
       "id": "mcq_1",
       "question": "What is the primary purpose of normalization in machine learning?",
       "options": [
-        "A) To ensure all features contribute equally to the model’s output.",
-        "B) To increase the computational complexity of the model.",
-        "C) To reduce the number of features in the dataset.",
-        "D) To enhance the visual appeal of the data visualization."
+        "A) To ensure all features have the same scale",
+        "B) To increase the computational complexity of models",
+        "C) To reduce the number of features in the dataset",
+        "D) To enhance the interpretability of the model"
       ],
       "correct_option": "A",
-      "explanation": "Normalization ensures that each feature contributes equally to the model’s output, which is crucial for algorithms that rely on distance measures, such as k-Nearest Neighbors and Support Vector Machines.",
+      "explanation": "Normalization ensures that all features have the same scale, which is crucial for algorithms that rely on distance measures or gradient descent. This prevents any single feature from dominating the others due to its scale.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is a benefit of normalizing data in machine learning?",
+      "question": "Which of the following is a benefit of using Min-Max Scaling over Z-Score Standardization?",
       "options": [
-        "A) It can improve the performance of models that rely on distance measures.",
-        "B) It can increase the bias in the model’s predictions.",
-        "C) It can reduce the accuracy of the model.",
-        "D) It can make the data more difficult to visualize."
-      ],
-      "correct_option": "A",
-      "explanation": "Normalization can improve the performance of models that rely on distance measures, such as k-Nearest Neighbors and Support Vector Machines, by ensuring that each feature contributes equally to the model’s output.",
-      "difficulty": "beginner",
-      "bloom_level": "remember"
-    },
-    {
-      "id": "mcq_3",
-      "question": "Which normalization technique scales the data to have a unit norm?",
-      "options": [
-        "A) Min-Max Scaling",
-        "B) Z-Score Standardization",
-        "C) L1 Normalization",
-        "D) L2 Normalization"
+        "A) It ensures that the data has a mean of 0 and a standard deviation of 1",
+        "B) It is less sensitive to outliers",
+        "C) It is easier to interpret the results",
+        "D) It is faster to compute"
       ],
       "correct_option": "D",
-      "explanation": "L2 normalization scales the data to have a unit norm, which is particularly useful for algorithms that rely on distance measures.",
+      "explanation": "Min-Max Scaling is generally faster to compute than Z-Score Standardization, especially when dealing with large datasets. This can be a significant advantage in practice.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
-      "id": "mcq_4",
-      "question": "Why is normalization important for algorithms like Support Vector Machines?",
+      "id": "mcq_3",
+      "question": "Which normalization technique would you use if you want to ensure that the transformed data lies between 0 and 1?",
       "options": [
-        "A) It ensures that the model’s predictions are always positive.",
-        "B) It helps in avoiding biases that might arise from the scale of the features.",
-        "C) It increases the computational complexity of the model.",
-        "D) It reduces the number of support vectors needed."
+        "A) Z-Score Standardization",
+        "B) Min-Max Scaling",
+        "C) Logarithmic Transformation",
+        "D) Box-Cox Transformation"
       ],
       "correct_option": "B",
-      "explanation": "Normalization helps in avoiding biases that might arise from the scale of the features, which is crucial for algorithms like Support Vector Machines.",
+      "explanation": "Min-Max Scaling transforms the data to a range between 0 and 1, making it suitable for ensuring that the transformed data lies within this range.",
+      "difficulty": "beginner",
+      "bloom_level": "remember"
+    },
+    {
+      "id": "mcq_4",
+      "question": "Why might you choose to use Z-Score Standardization over Min-Max Scaling?",
+      "options": [
+        "A) To ensure that the data lies between 0 and 1",
+        "B) To handle outliers effectively",
+        "C) To make the data easier to visualize",
+        "D) To improve the performance of distance-based algorithms"
+      ],
+      "correct_option": "B",
+      "explanation": "Z-Score Standardization is less sensitive to outliers because it transforms the data to have a mean of 0 and a standard deviation of 1. This can be particularly useful in distance-based algorithms where outliers can significantly affect the results.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "mcq_5",
-      "question": "Which of the following is a key difference between Min-Max Scaling and L2 Normalization?",
+      "question": "Which of the following is a potential drawback of using Z-Score Standardization?",
       "options": [
-        "A) Min-Max Scaling scales the data to a fixed range, while L2 Normalization scales the data to have a unit norm.",
-        "B) Min-Max Scaling is only used for categorical data, while L2 Normalization is for numerical data.",
-        "C) Min-Max Scaling is computationally more expensive, while L2 Normalization is faster.",
-        "D) Min-Max Scaling is less sensitive to outliers, while L2 Normalization is more sensitive."
+        "A) It is computationally expensive",
+        "B) It is sensitive to outliers",
+        "C) It does not scale the data to a specific range",
+        "D) It is not suitable for categorical data"
       ],
-      "correct_option": "A",
-      "explanation": "Min-Max Scaling scales the data to a fixed range, while L2 Normalization scales the data to have a unit norm, which is particularly useful for algorithms that rely on distance measures.",
+      "correct_option": "C",
+      "explanation": "Z-Score Standardization transforms the data to have a mean of 0 and a standard deviation of 1, but it does not scale the data to a specific range. This can be a drawback in scenarios where a specific range is required.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
     }
@@ -78,71 +78,69 @@
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the importance of normalization in the context of Support Vector Machines (SVMs).",
-      "model_answer": "Normalization is crucial for SVMs because it helps in avoiding biases that might arise from the scale of the features. SVMs rely on distance measures to find the optimal hyperplane, and normalization ensures that each feature contributes equally to the model’s output, improving the performance and stability of the SVM.",
+      "question": "Explain the difference between Min-Max Scaling and Z-Score Standardization.",
+      "model_answer": "Min-Max Scaling transforms the data to a range between 0 and 1, while Z-Score Standardization transforms the data to have a mean of 0 and a standard deviation of 1. Min-Max Scaling is useful when the range of the data is important, whereas Z-Score Standardization is more suitable when the distribution of the data is important and outliers need to be handled.",
       "key_concepts": [
-        "Support Vector Machines",
-        "Feature scaling",
-        "Distance measures"
+        "Min-Max Scaling",
+        "Z-Score Standardization"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Compare and contrast Min-Max Scaling and L2 Normalization in terms of their applications and advantages.",
-      "model_answer": "Min-Max Scaling is used to scale the data to a fixed range, which is particularly useful when the range of the data is known or when the data contains outliers. On the other hand, L2 Normalization scales the data to have a unit norm, which is particularly useful for algorithms that rely on distance measures. Both techniques have their advantages, but L2 Normalization is often preferred for its simplicity and effectiveness in avoiding biases.",
+      "question": "Why is normalization important for algorithms that rely on distance measures?",
+      "model_answer": "Normalization is crucial for algorithms that rely on distance measures because it ensures that all features contribute uniformly to the distance calculation. Without normalization, features with larger scales can disproportionately influence the distance, leading to biased or incorrect results. Normalization helps in ensuring that the distance measures are fair and accurate.",
       "key_concepts": [
-        "Min-Max Scaling",
-        "L2 Normalization",
-        "Feature scaling"
+        "distance measures",
+        "feature scaling"
       ],
-      "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "difficulty": "intermediate",
+      "bloom_level": "apply"
     },
     {
       "id": "sa_3",
-      "question": "Design a scenario where normalization would be particularly important and explain why.",
-      "model_answer": "Normalization would be particularly important in a scenario where a machine learning model is being used for image recognition. In this case, the pixel values of the images need to be standardized to improve the performance of the model. Normalization ensures that each pixel contributes equally to the model’s output, which is crucial for distance-based algorithms like k-Nearest Neighbors and Support Vector Machines.",
+      "question": "Discuss the implications of not normalizing data in a machine learning model.",
+      "model_answer": "Not normalizing data can lead to several issues. Features with larger scales can dominate the model's predictions, leading to biased results. This can also affect the convergence of optimization algorithms, such as gradient descent, and may cause the model to perform poorly. Normalization helps in ensuring that all features contribute uniformly to the model's performance and training efficiency.",
       "key_concepts": [
-        "Image recognition",
-        "Normalization",
-        "Feature scaling"
+        "feature scaling",
+        "model performance",
+        "gradient descent"
       ],
       "difficulty": "advanced",
-      "bloom_level": "create"
+      "bloom_level": "evaluate"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "Normalization",
-      "back": "A process of scaling the data to have a unit norm, ensuring that each feature contributes equally to the model’s output, which is particularly important for algorithms that rely on distance measures.",
-      "hint": "Think of it as making all features 'equal' in terms of their impact on the model."
+      "back": "A process in data preprocessing that scales the features to a common range, ensuring that no single feature dominates the others due to its scale. Common methods include Min-Max Scaling and Z-Score Standardization.",
+      "hint": "Think of balancing the scales."
     },
     {
       "id": "fc_2",
-      "front": "L2 Normalization",
-      "back": "A type of normalization that scales the data to have a unit norm, often used in algorithms that rely on distance measures to ensure that each feature contributes equally to the model’s output.",
-      "hint": "Useful for maintaining numerical stability."
+      "front": "Min-Max Scaling",
+      "back": "A normalization technique that scales the data to a range between 0 and 1. Formula: $X' = \frac{X - X_{\text{min}}}{X_{\text{max}} - X_{\text{min}}}$, where $X'$ is the normalized value, $X$ is the original value, and $X_{\text{min}}$ and $X_{\text{max}}$ are the minimum and maximum values of the feature, respectively.",
+      "hint": "Between 0 and 1."
     },
     {
       "id": "fc_3",
-      "front": "Min-Max Scaling",
-      "back": "A type of normalization that scales the data to a fixed range, often used when the range of the data is known or when the data contains outliers.",
-      "hint": "Useful for handling outliers."
+      "front": "Z-Score Standardization",
+      "back": "A normalization technique that transforms the data to have a mean of 0 and a standard deviation of 1. Formula: $X' = \frac{X - \\mu}{\\sigma}$, where $X'$ is the normalized value, $X$ is the original value, $\\mu$ is the mean, and $\\sigma$ is the standard deviation of the feature.",
+      "hint": "Mean 0, SD 1."
     },
     {
       "id": "fc_4",
       "front": "Feature Scaling",
-      "back": "A broader term that encompasses various techniques to scale the data, including Min-Max Scaling and L2 Normalization, to ensure that each feature contributes equally to the model’s output.",
-      "hint": "Think of it as preparing the data for the model."
+      "back": "The process of normalizing the features in a dataset to ensure that they contribute uniformly to the model's performance. This is crucial for algorithms that rely on distance measures or gradient descent.",
+      "hint": "Equal contribution."
     },
     {
       "id": "fc_5",
       "front": "Distance Measures",
-      "back": "Quantitative measures of the difference between two points, often used in algorithms like k-Nearest Neighbors and Support Vector Machines to find the optimal hyperplane.",
-      "hint": "Key to understanding how models make decisions."
+      "back": "Quantitative measures of the difference between two points or objects. In machine learning, these are often used in algorithms like k-Nearest Neighbors and clustering. Normalization ensures that the distance measures are fair and accurate.",
+      "hint": "Measure the distance."
     }
   ],
   "topic_id": "data_representation_&_preprocessing"

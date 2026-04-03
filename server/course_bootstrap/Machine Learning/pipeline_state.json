@@ -1,23 +1,50 @@
 {
-  "pdfs": {},
+  "pdfs": {
+    "2e81d5558ff4fca1014b8b1447ebc2bcfd7720b98c76f4ba8e3410e9bbb3dd7b": {
+      "filename": "R1.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    },
+    "d04183987f49330d3b4f260f4062fe7713efc4aac827f49d781263786f1f544d": {
+      "filename": "R2.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    },
+    "bc25ed42b3cc2d5663f1f83172404bec8927e9b09546f69c1fdc914860b3955e": {
+      "filename": "R3.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    },
+    "4ee767e0a6b04fa05ba7e599e9dbb4637a94a4407ccedf0b4d316b1fd7c8ec64": {
+      "filename": "R4.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    },
+    "2dd0d71d9ee883fbeb99f9b888c65ac3255fae2512203d11b18e838befffe9a6": {
+      "filename": "R7.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    },
+    "880b976d7951de257e9c43b02910fe1b7500cab93be7e9a9883fc80950eff762": {
+      "filename": "R8.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    },
+    "978fd4a1f88d152f747ff4828c7bc19aa9bfa8314ce93227656193f6d6af907d": {
+      "filename": "R9.pdf",
+      "markdown_done": true,
+      "qdrant_done": true,
+      "deleted": true
+    }
+  },
   "mds": {
-    "3acdfe02403915d5a5ca19bc6ba92b2d7574eb438e2a25ca71c5680e7dd8e93c": {
-      "filename": "R4.md",
-      "qdrant_done": true
-    },
-    "bdbcfbbbd4094b54c24a64d40550b73dce3f19fd2365f8c6a236d49d19c475d3": {
-      "filename": "R7.md",
-      "qdrant_done": true
-    },
-    "7b6d32499d4c0b1e3628ed4097018311bed4684990ee73b638717f79b20b30af": {
-      "filename": "R8.md",
-      "qdrant_done": true
-    },
-    "66ab5c80fe5a1178002098da3e065000c0ca32500559f8cdae76c3e0d7b69f9b": {
-      "filename": "R9.md",
-      "qdrant_done": true
-    },
-    "5516884252f83e35cfa0427e6f197fb585a28c27a7b9f713b11ede45b24286f8": {
+    "4a90c5a908be609544a3100e390d47565fbae4738175eaed74c4434d4836af54": {
       "filename": "R1.md",
       "qdrant_done": true
     },
@@ -25,8 +52,24 @@
       "filename": "R2.md",
       "qdrant_done": true
     },
-    "371f4dd3ee004b219e00eae0282b9226bff2655cee3f8e457dbdc70c1bdf40ac": {
+    "f800c0919185dabe7e7a2001ea16af44858b6e345490654d323f459cd4481866": {
       "filename": "R3.md",
+      "qdrant_done": true
+    },
+    "80f9d1d6b0e8e7287e06ee84d314808c68909d2e761adeb002ee87290eb5ffee": {
+      "filename": "R4.md",
+      "qdrant_done": true
+    },
+    "6a606085960e89fc022422de7d182e538c23b5206248cb00cff042d921b5b823": {
+      "filename": "R7.md",
+      "qdrant_done": true
+    },
+    "5870fd33a4514bf908c6d46d9903e14eeff96cbeb270f1800049472c8773ea7a": {
+      "filename": "R8.md",
+      "qdrant_done": true
+    },
+    "a44cb2a9a79850aeaab7f9d78899554c3d9c945f22a6db9c1ec2837ec3348c73": {
+      "filename": "R9.md",
       "qdrant_done": true
     }
   },
@@ -42,6 +85,8 @@
     "reinforcement_learning",
     "hypothesis_space",
     "inductive_bias",
+    "distance_measures",
+    "similarity_measures",
     "overfitting",
     "underfitting",
     "feature_scaling",
@@ -85,9 +130,7 @@
     "adaptive_rl_control",
     "time_series",
     "faults",
-    "end_to_end_ml_pipeline",
-    "distance_measures",
-    "similarity_measures"
+    "end_to_end_ml_pipeline"
   ],
   "stn_qdrant_done": [
     "definition_of_ml",
@@ -101,6 +144,8 @@
     "reinforcement_learning",
     "hypothesis_space",
     "inductive_bias",
+    "distance_measures",
+    "similarity_measures",
     "overfitting",
     "underfitting",
     "feature_scaling",
@@ -144,9 +189,7 @@
     "adaptive_rl_control",
     "time_series",
     "faults",
-    "end_to_end_ml_pipeline",
-    "distance_measures",
-    "similarity_measures"
+    "end_to_end_ml_pipeline"
   ],
   "questions_done": [
     "definition_of_ml",
@@ -160,15 +203,14 @@
     "reinforcement_learning",
     "hypothesis_space",
     "inductive_bias",
+    "distance_measures",
+    "similarity_measures",
     "overfitting",
     "underfitting",
     "feature_scaling",
     "normalization",
     "ml_pipeline",
-    "evaluation",
-    "tutorial",
     "least_squares",
-    "sigmoid",
     "binary_classification",
     "cost_optimization",
     "single_layer_nn",
@@ -179,12 +221,12 @@
     "kernels",
     "numericals",
     "entropy",
+    "information_gain",
     "ensemble",
     "bagging",
     "naive_bayes",
     "k_means",
     "hierarchical",
-    "dimensionality_reduction",
     "graph_representation",
     "precision",
     "recall",
@@ -194,6 +236,7 @@
     "case_studies",
     "l1",
     "l2",
+    "sgd",
     "momentum",
     "dimensionality_issues",
     "boosting",
@@ -202,10 +245,10 @@
     "time_series",
     "faults",
     "end_to_end_ml_pipeline",
-    "information_gain",
-    "distance_measures",
-    "similarity_measures",
-    "sgd"
+    "evaluation",
+    "sigmoid",
+    "dimensionality_reduction",
+    "tutorial"
   ],
   "skill_tree_done": true,
   "discovery_done": false,
@@ -222,6 +265,8 @@
     "reinforcement_learning",
     "hypothesis_space",
     "inductive_bias",
+    "distance_measures",
+    "similarity_measures",
     "overfitting",
     "underfitting",
     "feature_scaling",
@@ -265,12 +310,10 @@
     "adaptive_rl_control",
     "time_series",
     "faults",
-    "end_to_end_ml_pipeline",
-    "distance_measures",
-    "similarity_measures"
+    "end_to_end_ml_pipeline"
   ],
   "scholarly_done": true,
   "raw_chunks_cleared": true,
-  "last_run": "2026-03-29T22:47:46",
-  "lecture_done": true
+  "lecture_done": true,
+  "last_run": "2026-04-02T10:18:25"
 }

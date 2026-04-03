@@ -96,10 +96,10 @@ function CurriculumPanel({
     const overallPct = totalTopics > 0 ? Math.round((doneTopics / totalTopics) * 100) : 0;
 
     return (
-        <div className="h-full flex flex-col" style={{ background: 'rgba(10,12,18,0.97)' }}>
+        <div className="h-full flex flex-col" style={{ background: '#0d0d0d' }}>
 
             {/* ── Header ── */}
-            <div className="px-4 pt-4 pb-3 border-b border-white/5 flex-shrink-0">
+            <div className="px-4 pt-4 pb-3 border-b border-[#4a4a4a]/60 flex-shrink-0">
                 <div className="flex items-center gap-2 mb-1">
                     <GraduationCap size={15} className="text-teal-400" />
                     <span className="text-sm font-semibold text-white">Curriculum Progress</span>
@@ -313,7 +313,7 @@ function CurriculumPanel({
 
             {/* ── Footer stats ── */}
             {!loading && curriculum && modules.length > 0 && (
-                <div className="px-4 py-2.5 border-t border-white/5 flex-shrink-0 flex items-center justify-between">
+                <div className="px-4 py-2.5 border-t border-[#4a4a4a]/60 flex-shrink-0 flex items-center justify-between">
                     <span className="text-[11px] text-gray-500">
                         Modules: <span className="text-gray-300">{completedModules.length}/{modules.length}</span>
                     </span>

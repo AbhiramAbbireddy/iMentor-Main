@@ -1,0 +1,61 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - navigation [ref=e5]:
+    - generic [ref=e6]:
+      - img [ref=e7]
+      - generic [ref=e10]: iMentor
+    - generic [ref=e11]:
+      - button "Sign In" [ref=e12] [cursor=pointer]
+      - button "Sign Up" [ref=e13] [cursor=pointer]
+  - generic [ref=e15]:
+    - generic [ref=e17]: Teach me about linked lists
+    - generic [ref=e20]:
+      - paragraph [ref=e21]: "Sure! A linked list is a linear data structure where each element is a separate object, referred to as a node. Each node contains two items: the data and a reference (or pointer) to the next node in the sequence."
+      - paragraph [ref=e22]: "Here’s a breakdown of the key concepts:"
+      - heading "1. Nodes" [level=3] [ref=e23]:
+        - text: "1."
+        - strong [ref=e24]: Nodes
+      - list [ref=e25]:
+        - listitem [ref=e26]:
+          - strong [ref=e27]: Data
+          - text: ": The information stored in the node."
+        - listitem [ref=e28]:
+          - strong [ref=e29]: Pointer
+          - text: ": A reference to the next node in the list. Initially, this pointer is"
+          - code [ref=e30]: undefined
+          - text: for the last node.
+      - heading "2. Structure" [level=3] [ref=e31]:
+        - text: "2."
+        - strong [ref=e32]: Structure
+      - list [ref=e33]:
+        - listitem [ref=e34]:
+          - text: The first node in the list is called the
+          - strong [ref=e35]: head
+          - text: .
+        - listitem [ref=e36]:
+          - text: The last node in the list, which has a
+          - code [ref=e37]: undefined
+          - text: pointer, is called the
+          - strong [ref=e38]: tail
+          - text: .
+      - heading "3. Operations" [level=3] [ref=e39]:
+        - text: "3."
+        - strong [ref=e40]: Operations
+      - list [ref=e41]:
+        - listitem [ref=e42]:
+          - strong [ref=e43]: Insertion
+          - text: ": Adding a new node to the list."
+        - listitem [ref=e44]:
+          - strong [ref=e45]: Deletion
+          - text: ": Removing a node"
+  - generic [ref=e47]:
+    - generic [ref=e48]:
+      - textbox "Ask iMentor anything about your studies..." [ref=e49]
+      - button "Voice input" [ref=e50] [cursor=pointer]:
+        - img [ref=e51]
+      - button "Send message" [disabled] [ref=e54]:
+        - img [ref=e55]
+    - paragraph [ref=e57]: Ask anything — sign in to unlock Tutor Mode, Deep Research, Knowledge Base, and more.
+```

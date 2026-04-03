@@ -1,47 +1,27 @@
 // server/routes/chat/handlers/codeHandler.js
-// Handles code-intent routing — redirects to code tools instead of chat reasoning.
-const log = require('../../../utils/logger');
-const { streamEvent } = require('../helpers');
+// Code-intent queries are answered normally by the standard handler.
+// This handler only annotates the context so the standard handler can
+// append a helpful "💡 Tip" about the Code Executor — it never intercepts
+// or short-circuits the response.
 
 /**
- * Returns true if this handler handled the request (and ended the response).
- * Returns false if the request should continue to the next handler.
+ * Always returns false — allows the request to continue to the next handler.
+ * Attaches a ctx flag so standardHandler can append a Code Executor tip
+ * at the end of its real response.
  *
- * @param {object} res  - Express response
+ * @param {object} res  - Express response (unused here)
  * @param {object} ctx  - Request context built by index.js
  */
 async function handle(res, ctx) {
-    const { queryIntent, tutorMode, capturePerformance } = ctx;
+    const { queryIntent, tutorMode } = ctx;
 
-    if (queryIntent !== 'code' || tutorMode) return false;
+    // Tag the context so standardHandler can append the tip
+    if (queryIntent === 'code' && !tutorMode) {
+        ctx.appendCodeExecutorTip = true;
+    }
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
-    const codeRoutingReply = {
-        sender: 'bot',
-        role: 'model',
-        text: 'This looks like a code-focused request. I have routed it to the code tooling path. Use the Code Executor tools for execution/analysis while I keep this response path optimized for chat reasoning.',
-        parts: [{ text: 'This looks like a code-focused request. I have routed it to the code tooling path. Use the Code Executor tools for execution/analysis while I keep this response path optimized for chat reasoning.' }],
-        timestamp: new Date(),
-        source_pipeline: 'intent-code-tools-route',
-        action: { type: 'NAVIGATE', payload: { path: '/tools/code-executor', api: '/api/tools/execute' } },
-        reasoningMeta: { branchCount: 1, reasoningDepth: 1, llmCallCount: 0, toolCalls: 0 }
-    };
-
-    capturePerformance({
-        intent: queryIntent,
-        reasoningDepth: 1,
-        llmCallCount: 0,
-        tokenUsageEstimate: 0,
-        branchCount: 1,
-        toolCalls: 0,
-    });
-    streamEvent(res, { type: 'final_answer', content: codeRoutingReply });
-    res.end();
-    return true;
+    // Always fall through — never intercept
+    return false;
 }
 
 module.exports = { handle };

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './useAuth';
+import toast from 'react-hot-toast';
 
 // Connect to the same origin so Vite's proxy forwards /socket.io → backend (avoids PNA/CORS issues)
 const SOCKET_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
@@ -41,6 +42,25 @@ export const useBadgeSocket = () => {
                 console.log('[Socket] 🏆 Badge earned!', badge);
             }
             setNewBadge(badge);
+        });
+
+        socket.on('xp_quality_bonus', (data) => {
+            if (isDev) {
+                console.log('[Socket] ⚡ XP quality bonus:', data);
+            }
+            const icon = data.score === 10 ? '🧠' : '✨';
+            const msg  = data.score === 10
+                ? `+${data.amount} XP — Excellent reasoning!`
+                : `+${data.amount} XP — Good thinking!`;
+            toast.success(msg, {
+                icon,
+                duration: 4000,
+                style: {
+                    background: 'rgba(107, 207, 127, 0.15)',
+                    border: '1px solid rgba(107, 207, 127, 0.4)',
+                    color: '#fff',
+                },
+            });
         });
 
         socket.on('connect_error', (err) => {

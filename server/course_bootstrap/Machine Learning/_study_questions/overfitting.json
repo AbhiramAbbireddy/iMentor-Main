@@ -6,71 +6,71 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "Which of the following best describes overfitting?",
+      "question": "What does overfitting refer to in the context of machine learning?",
       "options": [
-        "A) The model performs well on both training and test data.",
-        "B) The model performs poorly on both training and test data.",
-        "C) The model performs well on training data but poorly on test data.",
-        "D) The model performs poorly on training data but well on test data."
+        "A) A model that performs well on the training data but poorly on unseen data",
+        "B) A model that performs poorly on both training and unseen data",
+        "C) A model that is too simple to capture the underlying pattern",
+        "D) A model that is too complex and captures noise in the training data"
       ],
-      "correct_option": "C",
-      "explanation": "Overfitting is characterized by a model that fits the training data too closely, including its noise and outliers, leading to poor performance on unseen data.",
+      "correct_option": "D",
+      "explanation": "Overfitting occurs when a model is too complex and captures noise in the training data, leading to poor performance on new data.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which regularization technique can help prevent overfitting by penalizing large coefficients in a linear model?",
+      "question": "Which of the following techniques is NOT commonly used to prevent overfitting?",
       "options": [
-        "A) Dropout",
-        "B) Batch Normalization",
-        "C) L2 Regularization",
-        "D) Data Augmentation"
+        "A) Cross-validation",
+        "B) Regularization",
+        "C) Increasing the model complexity",
+        "D) Pruning"
       ],
       "correct_option": "C",
-      "explanation": "L2 Regularization adds a penalty equivalent to the square of the magnitude of coefficients, which helps in reducing overfitting.",
+      "explanation": "Increasing the model complexity is likely to exacerbate overfitting rather than prevent it. Techniques like cross-validation, regularization, and pruning are used to manage overfitting.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "mcq_3",
-      "question": "In the context of overfitting, what does the term 'generalization' refer to?",
+      "question": "In the context of the bias-variance tradeoff, what does a model with high variance indicate?",
       "options": [
-        "A) The model's ability to perform well on the training data.",
-        "B) The model's ability to perform well on the test data.",
-        "C) The model's ability to perform consistently on both training and test data.",
-        "D) The model's ability to perform consistently on new, unseen data."
+        "A) High bias and low variance",
+        "B) Low bias and high variance",
+        "C) High bias and high variance",
+        "D) Low bias and low variance"
       ],
-      "correct_option": "D",
-      "explanation": "Generalization refers to the model's ability to perform well on new, unseen data, which is the goal in machine learning to avoid overfitting.",
+      "correct_option": "B",
+      "explanation": "A model with high variance indicates low bias, meaning it fits the training data very well but may not generalize well to new data.",
       "difficulty": "intermediate",
-      "bloom_level": "understand"
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following is a sign of overfitting in a machine learning model?",
+      "question": "Which of the following best describes the relationship between model complexity and overfitting?",
       "options": [
-        "A) High in-sample error and low out-of-sample error.",
-        "B) Low in-sample error and high out-of-sample error.",
-        "C) High in-sample error and high out-of-sample error.",
-        "D) Low in-sample error and low out-of-sample error."
+        "A) As model complexity increases, the risk of overfitting decreases",
+        "B) As model complexity increases, the risk of overfitting increases",
+        "C) Model complexity has no impact on the risk of overfitting",
+        "D) As model complexity decreases, the risk of overfitting increases"
       ],
       "correct_option": "B",
-      "explanation": "Overfitting is indicated by a large gap between in-sample and out-of-sample errors, where the model fits the training data too closely, including its noise.",
+      "explanation": "As model complexity increases, the risk of overfitting increases because the model may start to capture noise in the training data.",
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "evaluate"
     },
     {
       "id": "mcq_5",
-      "question": "Which of the following is a common technique to mitigate overfitting in a neural network?",
+      "question": "What is the primary goal of using cross-validation in the context of preventing overfitting?",
       "options": [
-        "A) Increasing the learning rate",
-        "B) Adding more layers and neurons",
-        "C) Implementing dropout",
-        "D) Reducing the batch size"
+        "A) To increase the size of the training dataset",
+        "B) To evaluate the model's performance on different subsets of the data",
+        "C) To reduce the computational cost of training the model",
+        "D) To ensure the model is trained faster"
       ],
-      "correct_option": "C",
-      "explanation": "Implementing dropout randomly drops units during training, which helps in reducing overfitting by making the model more robust.",
+      "correct_option": "B",
+      "explanation": "Cross-validation is used to evaluate the model's performance on different subsets of the data, helping to identify and mitigate overfitting.",
       "difficulty": "advanced",
       "bloom_level": "evaluate"
     }
@@ -78,76 +78,71 @@
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the concept of bias and variance in the context of overfitting and underfitting.",
-      "model_answer": "Bias refers to the error due to overly simplistic assumptions in the learning algorithm, leading to underfitting. Variance refers to the error due to the model's sensitivity to fluctuations in the training data, leading to overfitting. Overfitting occurs when the model has high variance and low bias, fitting the training data too closely, while underfitting occurs when the model has high bias and low variance, failing to capture the underlying pattern in the data.",
+      "question": "Explain how overfitting can be detected using the concept of the bias-variance tradeoff.",
+      "model_answer": "Overfitting can be detected by observing a large difference between the training error and the validation error. This indicates that the model is performing well on the training data but poorly on unseen data, suggesting it has captured noise rather than the underlying pattern.",
       "key_concepts": [
-        "bias",
-        "variance",
-        "overfitting",
-        "underfitting"
+        "bias-variance tradeoff",
+        "training error",
+        "validation error"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Describe a scenario where overfitting might occur in a machine learning model.",
-      "model_answer": "Consider a scenario where a model is trained to predict house prices based on features like size, location, and age. If the model is too complex, it might start to fit the noise in the training data, such as random fluctuations in prices, leading to poor predictions on new houses. This is an example of overfitting, where the model performs well on the training data but poorly on new, unseen data.",
+      "question": "Discuss the role of regularization in preventing overfitting and explain how it works.",
+      "model_answer": "Regularization adds a penalty term to the loss function to discourage overly complex models. This penalty term increases the complexity cost, thereby reducing the risk of overfitting. By controlling the complexity of the model, regularization helps to balance the tradeoff between bias and variance, leading to better generalization.",
       "key_concepts": [
-        "overfitting",
-        "noise in training data",
-        "new, unseen data"
-      ],
-      "difficulty": "intermediate",
-      "bloom_level": "apply"
-    },
-    {
-      "id": "sa_3",
-      "question": "Discuss the trade-offs between bias and variance in the context of overfitting and underfitting.",
-      "model_answer": "The trade-off between bias and variance is a fundamental concept in machine learning. High bias models are overly simplistic and fail to capture the underlying pattern in the data, leading to underfitting. High variance models are too complex and fit the noise in the training data, leading to overfitting. The goal is to find a balance where the model has low bias and low variance, generalizing well to new data. This balance is often achieved through techniques like cross-validation, regularization, and model selection.",
-      "key_concepts": [
-        "bias",
-        "variance",
-        "underfitting",
-        "overfitting",
-        "cross-validation",
         "regularization",
-        "model selection"
+        "loss function",
+        "complexity cost"
       ],
       "difficulty": "advanced",
       "bloom_level": "analyze"
+    },
+    {
+      "id": "sa_3",
+      "question": "How can the concept of cross-validation be used to improve model generalization and prevent overfitting?",
+      "model_answer": "Cross-validation involves splitting the data into multiple subsets and training the model on different combinations of these subsets. This helps to assess the model's performance on various parts of the data, providing a more reliable estimate of its generalization ability. By ensuring the model performs well across different subsets, cross-validation can help prevent overfitting and improve the model's robustness.",
+      "key_concepts": [
+        "cross-validation",
+        "generalization",
+        "model performance"
+      ],
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
       "front": "Bias",
-      "back": "Bias is the error due to overly simplistic assumptions in the learning algorithm, leading to underfitting. It refers to the difference between the expected prediction of the model and the true value of the target variable.",
-      "hint": "Think of it as the model's tendency to make the same mistake repeatedly."
+      "back": "Bias refers to the error introduced by approximating a real-world problem by a simplified model. In the context of the bias-variance tradeoff, high bias indicates that the model is too simple to capture the underlying pattern of the data, leading to underfitting.",
+      "hint": "Think of bias as the model's tendency to make systematic errors."
     },
     {
       "id": "fc_2",
       "front": "Variance",
-      "back": "Variance is the error due to the model's sensitivity to fluctuations in the training data, leading to overfitting. It refers to the model's tendency to fit the noise in the training data, resulting in poor generalization to new data.",
-      "hint": "Imagine a model that fits the training data too closely, including its noise."
+      "back": "Variance refers to the error introduced by the model's sensitivity to small fluctuations in the training data. In the context of the bias-variance tradeoff, high variance indicates that the model is too complex and captures noise in the training data, leading to overfitting.",
+      "hint": "Variance measures how much the model's predictions vary with different training datasets."
     },
     {
       "id": "fc_3",
-      "front": "Regularization",
-      "back": "Regularization is a technique used to control the complexity of a model and reduce overfitting. It adds a penalty to the loss function based on the magnitude of the model's coefficients, such as L1 and L2 regularization.",
-      "hint": "Think of it as a way to shrink the model's coefficients to prevent overfitting."
+      "front": "Cross-Validation",
+      "back": "Cross-validation is a technique used to assess the performance of a model on unseen data. It involves splitting the data into multiple subsets and training the model on different combinations of these subsets. This helps to estimate the model's generalization ability and prevent overfitting.",
+      "hint": "Use cross-validation to ensure your model performs well on different parts of the data."
     },
     {
       "id": "fc_4",
-      "front": "In-sample error",
-      "back": "In-sample error is the error measured on the training data. It is the difference between the predicted values and the actual values in the training set.",
-      "hint": "It's like checking how well the model fits the data it was trained on."
+      "front": "Regularization",
+      "back": "Regularization is a technique used to prevent overfitting by adding a penalty term to the loss function. This penalty term increases the complexity cost, thereby discouraging overly complex models. Common regularization methods include L1 (Lasso) and L2 (Ridge) regularization.",
+      "hint": "Regularization helps to balance the tradeoff between bias and variance."
     },
     {
       "id": "fc_5",
-      "front": "Out-of-sample error",
-      "back": "Out-of-sample error is the error measured on new, unseen data. It is the difference between the predicted values and the actual values in the test set, indicating the model's generalization ability.",
-      "hint": "It's like checking how well the model predicts new data it hasn't seen before."
+      "front": "Overfitting",
+      "back": "Overfitting occurs when a model is too complex and captures noise in the training data, leading to poor performance on new data. It is characterized by a large difference between the training error and the validation error.",
+      "hint": "Think of overfitting as a model that is too flexible and fits the noise in the training data."
     }
   ],
   "topic_id": "bias_variance_tradeoff"

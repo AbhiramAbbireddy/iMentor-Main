@@ -41,6 +41,8 @@ async function handle(res, ctx) {
         contextualMemory,
         userRequestedToT,  // Issue 1.2: true when user explicitly enabled the ToT toggle
         disabledToggles,   // Issue 1.3: toggles the system silently disabled
+        hybridDecomposition,      // sub-query routing plan from hybridQueryDecomposer
+        buildHybridContextBlock,  // prompt injection helper
     } = ctx;
 
     // ── SEMANTIC ROUTE DECISION ─────────────────────────────────────────────
@@ -349,12 +351,37 @@ async function handle(res, ctx) {
         ? Promise.resolve(expertAck)
         : knowledgeStateService.getAcknowledgmentPrefix(userId, query).catch(() => null);
 
+    // ── HYBRID CONTEXT INJECTION ────────────────────────────────────────────
+    // When the query was split into conceptual + temporal segments, prepend a
+    // context block to the system prompt that tells the LLM:
+    //   - which parts to answer from its trained knowledge
+    //   - which parts to answer from the retrieved web/academic results
+    // The agent will fetch the actual search results; we just give it the plan.
+    let effectiveSystemPrompt = finalSystemPrompt;
+    let effectiveRequestContext = requestContext;
+    if (hybridDecomposition?.isHybrid && typeof buildHybridContextBlock === 'function') {
+        const hybridBlock = buildHybridContextBlock(hybridDecomposition, {});
+        if (hybridBlock) {
+            effectiveSystemPrompt = hybridBlock + '\n\n' + (finalSystemPrompt || '');
+            log.info('AI', '[HYBRID] Injected hybrid context block into system prompt');
+        }
+        // Pass focused per-segment search queries so the agent uses them
+        // instead of running the full query through every search tool
+        if (hybridDecomposition.searchQueries) {
+            effectiveRequestContext = {
+                ...requestContext,
+                hybridSearchQueries: hybridDecomposition.searchQueries,
+                hybridSegments:      hybridDecomposition.segments,
+            };
+        }
+    }
+
     const agentStart = Date.now();
     const agentResponse = await processAgenticRequest(
         query.trim(),
         historyForLlm,
-        finalSystemPrompt,
-        { ...requestContext, forceSimple: simpleFastPath || (queryIntent === 'chat' && !requestContext.isWebSearchEnabled && !requestContext.isAcademicSearchEnabled && !documentContextName) },
+        effectiveSystemPrompt,
+        { ...effectiveRequestContext, forceSimple: simpleFastPath || (queryIntent === 'chat' && !requestContext.isWebSearchEnabled && !requestContext.isAcademicSearchEnabled && !documentContextName) },
         (evt) => {
             const event = typeof evt === 'string' ? { type: 'token', content: evt } : evt;
             // SSE is the primary transport — Socket.IO reserved for cross-tab push only
@@ -396,17 +423,27 @@ async function handle(res, ctx) {
     // ack prefix was prefetched in parallel — should already be resolved by now
     const ackPrefix = await ackPrefixPromise;
 
+    // Build the response text, optionally appending a Code Executor tip for code-intent queries
+    const CODE_TIP = ctx.appendCodeExecutorTip
+        ? '\n\n---\n💡 **Tip:** For running or testing this code interactively, try the [Code Executor](/tools/code-executor).'
+        : '';
+
+    const baseText = ackPrefix ? ackPrefix + agentResponse.finalAnswer : agentResponse.finalAnswer;
+    const responseText = baseText + CODE_TIP;
+
     const finalAiMessage = {
         sender: 'bot', role: 'model',
-        text: ackPrefix ? ackPrefix + agentResponse.finalAnswer : agentResponse.finalAnswer,
-        parts: [{ text: ackPrefix ? ackPrefix + agentResponse.finalAnswer : agentResponse.finalAnswer }],
+        text: responseText,
+        parts: [{ text: responseText }],
         timestamp: new Date(),
         thinking: agentResponse.thinking || null,
         references: agentResponse.references || [],
         source_pipeline: agentResponse.sourcePipeline,
         confidenceScore: agentResponse.confidenceScore ?? null,
         reasoningMeta: agentResponse.reasoningMeta || null,
-        action: agentResponse.action || null,
+        action: ctx.appendCodeExecutorTip
+            ? { type: 'NAVIGATE', payload: { path: '/tools/code-executor', api: '/api/tools/execute' } }
+            : (agentResponse.action || null),
         logId: logEntry._id,
         criticalThinkingCues: null,  // populated asynchronously after res.end()
         // Issue 1.3: inform the frontend which toggles were silently disabled so it can show a notice

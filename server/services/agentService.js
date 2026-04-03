@@ -1,4 +1,5 @@
-const log = require('../utils/logger');
+const log         = require('../utils/logger');
+const sglangCaps  = require('./sglangCapabilities');
 // server/services/agentService.js
 const {
   CHAT_MAIN_SYSTEM_PROMPT,
@@ -1051,7 +1052,9 @@ async function processAgenticRequest(
           { role: 'user', content: userQuery },
         ];
         const r = await axios.post(`${sglUrl}/chat/completions`, {
-          model: sglModel, messages: msgs, max_tokens: 8192, temperature: 0.7, stream: false,
+          model: sglModel, messages: msgs,
+          max_tokens: Math.min(4096, Math.max(512, sglangCaps.getModelMaxContext() - Math.ceil(msgs.map(m => m.content).join(' ').length / 3.5) - 256)),
+          temperature: 0.7, stream: false,
         }, { timeout: 60000 });
         directAnswer = r.data?.choices?.[0]?.message?.content?.trim() || '';
       } else {
@@ -1196,7 +1199,9 @@ async function processAgenticRequest(
           { role: 'user', content: synthesizerUserQuery }
         ];
         const sglResp = await axios.post(`${sglUrl}/chat/completions`, {
-          model: sglModel, messages: synthMsgs, max_tokens: 8192, temperature: 0.7, stream: false
+          model: sglModel, messages: synthMsgs,
+          max_tokens: Math.min(4096, Math.max(512, sglangCaps.getModelMaxContext() - Math.ceil(synthMsgs.map(m => m.content).join(' ').length / 3.5) - 256)),
+          temperature: 0.7, stream: false
         }, { timeout: 60000 });
         finalAnswerWithThinking = sglResp.data?.choices?.[0]?.message?.content?.trim() || '';
       }

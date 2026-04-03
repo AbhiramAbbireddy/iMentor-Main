@@ -234,6 +234,23 @@ const api = {
     const response = await apiClient.get("/subjects");
     return response.data;
   },
+  getCourseStructure: async (courseName) => {
+    const response = await apiClient.get(`/courses/${encodeURIComponent(courseName)}/structure`);
+    return response.data;
+  },
+  getCourseSubtopicNotes: async (courseName, subtopicId) => {
+    const response = await apiClient.get(
+      `/courses/${encodeURIComponent(courseName)}/notes/${encodeURIComponent(subtopicId)}`
+    );
+    return response.data;
+  },
+  getCourseLectureSection: async (courseName, subtopicId, subtopicName = '', topicName = '') => {
+    const response = await apiClient.get(
+      `/courses/${encodeURIComponent(courseName)}/lecture/${encodeURIComponent(subtopicId)}`,
+      { params: { subtopicName, topicName }, timeout: 130000 }
+    );
+    return response.data;
+  },
   requestAnalysis: async (payload) => {
     const { filename, analysis_type } = payload;
     if (!filename || !analysis_type) {
@@ -667,6 +684,28 @@ const api = {
     const response = await apiClient.post(`/research/${id}/export`, {}, {
       responseType: 'blob'
     });
+    return response.data;
+  },
+
+  // --- Deep Research Job APIs (fire-and-forget) ---
+  startResearchJob: async ({ query, nature, depth }) => {
+    const response = await apiClient.post('/deep-research/start', { query, nature, depth });
+    return response.data;
+  },
+  getResearchJobStatus: async (jobId) => {
+    const response = await apiClient.get(`/deep-research/jobs/${jobId}`);
+    return response.data;
+  },
+  getResearchJobReport: async (jobId) => {
+    const response = await apiClient.get(`/deep-research/jobs/${jobId}/report`);
+    return response.data;
+  },
+  listResearchJobs: async () => {
+    const response = await apiClient.get('/deep-research/jobs');
+    return response.data;
+  },
+  getDeepResearchHistory: async () => {
+    const response = await apiClient.get('/deep-research/history');
     return response.data;
   },
 

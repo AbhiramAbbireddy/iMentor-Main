@@ -4,6 +4,7 @@ const Groq = require('groq-sdk');
 const axios = require('axios');
 const log = require('../utils/logger');
 const sglangService = require('./sglangService');
+const sglangCaps    = require('./sglangCapabilities');
 
 /**
  * Unified streaming service for ALL LLM providers.
@@ -289,15 +290,15 @@ async function streamSGLang({ messages, model, systemPrompt, onToken, options })
     }));
     const userQuery = messages[messages.length - 1].content;
 
-    // Estimate input tokens (rough approximation: 1 token ≈ 4 chars)
+    // Estimate input tokens (rough approximation: 1 token ≈ 3.5 chars for Qwen)
     const historyText = chatHistory.map(m => m.content).join(' ');
-    const estimatedInputTokens = Math.ceil((historyText.length + userQuery.length + (systemPrompt?.length || 0)) / 4);
+    const estimatedInputTokens = Math.ceil((historyText.length + userQuery.length + (systemPrompt?.length || 0)) / 3.5);
     
-    // SGLang models have 16384 token context window (RTX A4000 16GB) - leave buffer for completion
-    const modelMaxContext = 16384;
-    const safetyBuffer = 200;
+    // Read actual context window from the running SGLang server (cached)
+    const modelMaxContext = sglangCaps.getModelMaxContext();
+    const safetyBuffer = 256;
     const availableForCompletion = Math.max(512, modelMaxContext - estimatedInputTokens - safetyBuffer);
-    const maxTokens = Math.min(options.maxTokens || 8192, availableForCompletion);
+    const maxTokens = Math.min(options.maxTokens || 4096, availableForCompletion);
     
     log.info('AI', `[SGLang] Token budget: input≈${estimatedInputTokens} + completion=${maxTokens} ≈ ${estimatedInputTokens + maxTokens} / ${modelMaxContext}`);
 

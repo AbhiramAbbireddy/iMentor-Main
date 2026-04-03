@@ -6,29 +6,29 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the primary purpose of using a moving average in time series analysis?",
+      "question": "What is the primary purpose of analyzing time series data?",
       "options": [
-        "A) To smooth out short-term fluctuations and highlight longer-term trends.",
-        "B) To predict future values with high accuracy.",
-        "C) To identify anomalies in the data.",
-        "D) To calculate the exact values of the time series at each point."
+        "A) To identify trends and patterns over time.",
+        "B) To predict future stock prices.",
+        "C) To find the average value of data points.",
+        "D) To classify data into different categories."
       ],
       "correct_option": "A",
-      "explanation": "A moving average is used to smooth out short-term fluctuations and highlight longer-term trends, making it easier to identify patterns and trends in the data.",
+      "explanation": "Analyzing time series data primarily involves identifying trends and patterns over time, which is fundamental for forecasting and anomaly detection.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is a common method for detecting anomalies in time series data?",
+      "question": "Which of the following models is commonly used for forecasting time series data?",
       "options": [
-        "A) Applying a moving average filter.",
-        "B) Using a simple linear regression.",
-        "C) Identifying outliers in the data.",
-        "D) Calculating the standard deviation of the time series."
+        "A) Linear regression.",
+        "B) ARIMA (AutoRegressive Integrated Moving Average).",
+        "C) Decision trees.",
+        "D) K-means clustering."
       ],
-      "correct_option": "C",
-      "explanation": "Outliers or points that significantly deviate from the norm are often considered anomalies in time series data.",
+      "correct_option": "B",
+      "explanation": "ARIMA is a popular model for forecasting time series data due to its ability to handle trends and seasonality.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
@@ -36,114 +36,112 @@
       "id": "mcq_3",
       "question": "In the context of time series analysis, what does the term 'stationarity' refer to?",
       "options": [
-        "A) The process of making a time series stationary by differencing.",
-        "B) The property of a time series where its statistical properties such as mean and variance are constant over time.",
-        "C) The method of forecasting future values using past values.",
-        "D) The technique of removing outliers from the data."
+        "A) The data points are evenly spaced in time.",
+        "B) The statistical properties of the series are constant over time.",
+        "C) The data shows a clear trend over time.",
+        "D) The data is normally distributed."
       ],
       "correct_option": "B",
-      "explanation": "A stationary time series has statistical properties that are constant over time, which is crucial for many time series analysis techniques.",
-      "difficulty": "advanced",
+      "explanation": "Stationarity in time series analysis means that the statistical properties of the series are constant over time, which is important for accurate forecasting.",
+      "difficulty": "intermediate",
       "bloom_level": "understand"
     },
     {
       "id": "mcq_4",
-      "question": "Which of the following models is most suitable for forecasting future values in a time series with a clear seasonal pattern?",
+      "question": "Which of the following is a characteristic of an anomaly in time series data?",
       "options": [
-        "A) Simple moving average.",
-        "B) Exponential smoothing.",
-        "C) Seasonal ARIMA (SARIMA).",
-        "D) Linear regression."
+        "A) It is a common occurrence in time series data.",
+        "B) It significantly deviates from the expected pattern.",
+        "C) It follows a predictable trend.",
+        "D) It is always associated with a seasonal pattern."
       ],
-      "correct_option": "C",
-      "explanation": "SARIMA models are designed to handle both trend and seasonality in time series data, making them ideal for forecasting in such scenarios.",
-      "difficulty": "intermediate",
-      "bloom_level": "apply"
+      "correct_option": "B",
+      "explanation": "An anomaly in time series data is characterized by a significant deviation from the expected pattern, which can be detected using various statistical methods.",
+      "difficulty": "advanced",
+      "bloom_level": "analyze"
     },
     {
       "id": "mcq_5",
-      "question": "What is the main advantage of using a seasonal decomposition of time series data?",
+      "question": "What is the main difference between forecasting and anomaly detection in time series analysis?",
       "options": [
-        "A) It allows for the removal of outliers from the data.",
-        "B) It helps in identifying the underlying trend and seasonality in the data.",
-        "C) It simplifies the time series into a single value.",
-        "D) It increases the accuracy of the moving average filter."
+        "A) Forecasting predicts future values, while anomaly detection identifies unusual patterns.",
+        "B) Forecasting is used in financial markets, while anomaly detection is used in weather forecasting.",
+        "C) Forecasting requires historical data, while anomaly detection does not.",
+        "D) Forecasting is a statistical method, while anomaly detection is a machine learning technique."
       ],
-      "correct_option": "B",
-      "explanation": "Seasonal decomposition separates the time series into trend, seasonal, and residual components, which is useful for understanding and forecasting.",
-      "difficulty": "beginner",
-      "bloom_level": "understand"
+      "correct_option": "A",
+      "explanation": "Forecasting predicts future values based on historical data, while anomaly detection identifies unusual patterns that do not conform to expected behavior.",
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain the concept of stationarity in time series analysis and why it is important.",
-      "model_answer": "Stationarity in time series analysis refers to the property where the statistical properties (such as mean and variance) of the series are constant over time. This is important because many time series analysis techniques, such as ARIMA, assume stationarity. If a time series is non-stationary, it can lead to misleading results and poor forecasts.",
+      "question": "Explain the concept of stationarity in time series data and why it is important for forecasting.",
+      "model_answer": "Stationarity in time series data refers to the property where the statistical properties (mean, variance, autocorrelation) are constant over time. This is important for forecasting because many forecasting models assume stationarity. If the data is not stationary, transformations such as differencing or detrending may be necessary to achieve stationarity before applying forecasting models.",
       "key_concepts": [
         "stationarity",
-        "time series analysis",
-        "ARIMA"
+        "forecasting"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Describe the process of detecting anomalies in a time series using statistical methods.",
-      "model_answer": "To detect anomalies in a time series, one can use statistical methods such as calculating the mean and standard deviation of the series. Points that lie outside a certain number of standard deviations from the mean (e.g., 3 standard deviations) can be flagged as potential anomalies. Additionally, techniques like Z-scores or the IQR method can be used to identify outliers.",
+      "question": "Describe the process of identifying anomalies in time series data and the methods that can be used.",
+      "model_answer": "Identifying anomalies in time series data involves detecting unusual patterns that do not conform to expected behavior. Common methods include statistical techniques such as Z-score, moving averages, and more advanced techniques like machine learning algorithms. These methods help in flagging points that significantly deviate from the norm, which can then be further investigated for reasons such as errors or significant events.",
       "key_concepts": [
         "anomaly detection",
-        "standard deviation",
-        "Z-scores",
-        "IQR method"
+        "statistical techniques",
+        "machine learning"
       ],
       "difficulty": "advanced",
       "bloom_level": "analyze"
     },
     {
       "id": "sa_3",
-      "question": "Compare and contrast the use of simple moving average and exponential smoothing in time series forecasting.",
-      "model_answer": "The simple moving average (SMA) is a straightforward method that calculates the average of a fixed number of past data points. It is easy to compute but can be slow to react to changes in the data. On the other hand, exponential smoothing assigns exponentially decreasing weights to past data points, making it more responsive to recent changes. SMA is better for smoothing out trends, while exponential smoothing is more adaptive to recent changes.",
+      "question": "Compare and contrast the ARIMA and LSTM (Long Short-Term Memory) models in the context of time series forecasting.",
+      "model_answer": "ARIMA is a statistical model that uses past values and differences to predict future values. It is well-suited for handling trends and seasonality. LSTM, on the other hand, is a type of recurrent neural network that can capture long-term dependencies in time series data. While ARIMA is simpler and easier to interpret, LSTM can handle more complex patterns and is particularly useful for non-linear time series data. Both models are valuable, but the choice depends on the specific characteristics of the data and the problem at hand.",
       "key_concepts": [
-        "simple moving average",
-        "exponential smoothing",
-        "response to changes"
+        "ARIMA",
+        "LSTM",
+        "time series forecasting"
       ],
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "evaluate"
     }
   ],
   "flashcards": [
     {
       "id": "fc_1",
-      "front": "Stationarity",
-      "back": "A property of a time series where its statistical properties (such as mean and variance) are constant over time. Important for many time series analysis techniques.",
-      "hint": "Think of a stable, predictable series."
+      "front": "Time series",
+      "back": "A sequence of data points indexed in time order. Time series data points are ordered by time, allowing for the analysis of trends and patterns.",
+      "hint": "Think of a timeline."
     },
     {
       "id": "fc_2",
-      "front": "Autocorrelation",
-      "back": "A measure of the correlation between observations in a time series at different time lags. Used to identify patterns and dependencies in the data.",
-      "hint": "Correlation over time."
+      "front": "Stationarity",
+      "back": "A property of a time series where the statistical properties (mean, variance, autocorrelation) are constant over time. Important for forecasting models.",
+      "hint": "Constant statistical properties."
     },
     {
       "id": "fc_3",
-      "front": "Seasonality",
-      "back": "A pattern in time series data where values exhibit regular and predictable fluctuations over a specific period. Often seen in data with seasonal trends.",
-      "hint": "Repeating patterns over time."
+      "front": "Forecasting",
+      "back": "The process of predicting future values based on historical data. Commonly used in various fields such as finance, weather forecasting, and social media trends.",
+      "hint": "Predicting the future."
     },
     {
       "id": "fc_4",
-      "front": "ARIMA",
-      "back": "Autoregressive Integrated Moving Average model, used for forecasting time series data. Combines autoregression, differencing, and moving average components.",
-      "hint": "Forecasting with past values."
+      "front": "Anomaly detection",
+      "back": "The process of identifying unusual patterns in time series data that do not conform to expected behavior. Useful for identifying errors or significant events.",
+      "hint": "Detecting the unusual."
     },
     {
       "id": "fc_5",
-      "front": "Anomaly",
-      "back": "A data point that significantly deviates from the norm in a time series. Often identified through statistical methods such as Z-scores or IQR.",
-      "hint": "Outlier detection."
+      "front": "ARIMA",
+      "back": "AutoRegressive Integrated Moving Average. A statistical model that uses past values and differences to predict future values, suitable for handling trends and seasonality.",
+      "hint": "Model for forecasting."
     }
   ],
   "topic_id": "forecasting_&_anomaly_detection"

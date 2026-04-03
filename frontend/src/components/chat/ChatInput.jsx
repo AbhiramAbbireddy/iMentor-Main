@@ -2,7 +2,7 @@
 import { useAppState } from '../../contexts/AppStateContext.jsx';
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api.js';
-import { Send, Mic, Plus, Brain, Zap, Globe, BookMarked, Sparkles, Square, Database } from 'lucide-react';
+import { Send, Mic, Plus, Brain, Zap, Globe, BookMarked, Sparkles, Square, Database, Lock } from 'lucide-react';
 import { useWebSpeech } from '../../hooks/useWebSpeech';
 import { useDeepResearch } from '../../contexts/DeepResearchContext';
 import Button from '../core/Button.jsx';
@@ -44,7 +44,9 @@ function ChatInput({
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
     const { isResearchMode, setIsResearchMode } = useDeepResearch();
-    const { selectDocumentForAnalysis, selectedDocumentForAnalysis } = useAppState();
+    const { selectDocumentForAnalysis, selectedDocumentForAnalysis, selectedSubject, setSelectedSubject } = useAppState();
+    // True when an admin course is selected from the left panel — RAG is mandatory in this state
+    const isAdminCourseActive = !!selectedSubject;
 
     const [isCoaching, setIsCoaching] = useState(false);
 
@@ -271,9 +273,12 @@ function ChatInput({
                     border:       isFocused
                         ? '1px solid var(--vs-border-hi)'
                         : '1px solid var(--vs-border)',
-                    borderRadius: '4px',
-                    transition:   'border-color 0.15s',
-                    padding:      '6px 8px',
+                    borderRadius: '6px',
+                    transition:   'border-color 0.15s, box-shadow 0.15s',
+                    padding:      '8px 10px',
+                    boxShadow:    isFocused
+                        ? '0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)'
+                        : '0 2px 8px rgba(0,0,0,0.3)',
                 }}
                 animation="fade-in"
             >
@@ -412,8 +417,8 @@ function ChatInput({
                             ${isLoading ? 'opacity-60' : ''}
                         `}
                         style={{
-                            caretColor:  'var(--vs-text)',
-                            color:       'var(--vs-text)',
+                            caretColor:  '#ffffff',
+                            color:       '#ffffff',
                             fontSize:    '0.875rem',
                             lineHeight:  '1.6',
                             opacity:     isLoading ? 0.5 : 1,
@@ -507,10 +512,14 @@ function ChatInput({
 
                     {/* RAG / Knowledge Base - Desktop */}
                     <button
-                        onClick={() => setIsKbOpen(prev => !prev)}
+                        onClick={() => { if (!isAdminCourseActive) setIsKbOpen(prev => !prev); }}
                         disabled={isLoading}
                         className="hidden sm:flex items-center gap-1"
-                        title={selectedDocumentForAnalysis ? `RAG active: ${selectedDocumentForAnalysis}` : 'Enable RAG / Knowledge Base'}
+                        title={
+                            isAdminCourseActive
+                                ? `RAG locked — "${selectedSubject}" is the active course. Deselect it from the Admin Subjects panel to disable.`
+                                : selectedDocumentForAnalysis ? `RAG active: ${selectedDocumentForAnalysis}` : 'Enable RAG / Knowledge Base'
+                        }
                         aria-label="Toggle RAG / Knowledge Base"
                         aria-pressed={!!(isKbOpen || selectedDocumentForAnalysis)}
                         style={{
@@ -518,16 +527,17 @@ function ChatInput({
                             background: (isKbOpen || selectedDocumentForAnalysis) ? 'var(--vs-active)' : 'transparent',
                             border: (isKbOpen || selectedDocumentForAnalysis) ? '1px solid var(--vs-border-hi)' : '1px solid transparent',
                             color: (isKbOpen || selectedDocumentForAnalysis) ? 'var(--vs-text)' : 'var(--vs-text-dim)',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            cursor: isAdminCourseActive ? 'default' : (isLoading ? 'not-allowed' : 'pointer'),
                             opacity: isLoading ? 0.4 : 1,
                             fontSize: '0.6875rem', fontWeight: (isKbOpen || selectedDocumentForAnalysis) ? 600 : 400,
                             transition: 'color 0.15s, background 0.15s',
                         }}
-                        onMouseEnter={e => { if (!(isKbOpen || selectedDocumentForAnalysis) && !isLoading) e.currentTarget.style.color = 'var(--vs-text-lo)'; }}
+                        onMouseEnter={e => { if (!(isKbOpen || selectedDocumentForAnalysis) && !isLoading && !isAdminCourseActive) e.currentTarget.style.color = 'var(--vs-text-lo)'; }}
                         onMouseLeave={e => { if (!(isKbOpen || selectedDocumentForAnalysis)) e.currentTarget.style.color = 'var(--vs-text-dim)'; }}
                     >
                         <Database size={13} />
                         <span>RAG</span>
+                        {isAdminCourseActive && <Lock size={10} style={{ marginLeft: '2px', opacity: 0.7 }} />}
                     </button>
 
                     {/* Divider */}
@@ -575,7 +585,7 @@ function ChatInput({
             </div>{/* end relative wrapper */}
 
             {/* Status Indicators — flat VS Code statusbar style */}
-            {(useWebSearch || useAcademicSearch || criticalThinkingEnabled || selectedDocumentForAnalysis) && (
+            {(useWebSearch || useAcademicSearch || criticalThinkingEnabled || selectedDocumentForAnalysis || selectedSubject) && (
                 <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1.5 px-1">
                     {[
                         useWebSearch        && { key: 'ws',  Icon: Globe,      label: 'Web Search'        },
@@ -598,25 +608,47 @@ function ChatInput({
                             </span>
                         </Animate>
                     ))}
-                    {selectedDocumentForAnalysis && (
+                    {(selectedDocumentForAnalysis || selectedSubject) && (
                         <Animate key="rag" animation="slide-up-sm">
-                            <button
-                                onClick={() => selectDocumentForAnalysis(null)}
-                                title="RAG active — click to deselect"
-                                className="inline-flex items-center gap-1 text-2xs cursor-pointer"
-                                style={{
-                                    padding:      '2px 6px',
-                                    borderRadius: '2px',
-                                    background:   'var(--vs-surface)',
-                                    border:       '1px solid var(--vs-border-hi)',
-                                    color:        'var(--vs-text)',
-                                }}
-                            >
-                                <Database size={10} />
-                                <span style={{ fontWeight: 600, marginRight: '2px' }}>RAG:</span>
-                                <span className="max-w-[100px] truncate">{selectedDocumentForAnalysis}</span>
-                                <span style={{ color: 'var(--vs-text-dim)', marginLeft: '1px' }}>×</span>
-                            </button>
+                            {isAdminCourseActive ? (
+                                // Admin course — RAG is mandatory, show lock instead of ×
+                                <span
+                                    title={`RAG locked to "${selectedSubject}". Deselect from Admin Subjects panel to disable.`}
+                                    className="inline-flex items-center gap-1 text-2xs"
+                                    style={{
+                                        padding:      '2px 6px',
+                                        borderRadius: '2px',
+                                        background:   'var(--vs-surface)',
+                                        border:       '1px solid var(--vs-border-hi)',
+                                        color:        'var(--vs-text)',
+                                        cursor:       'default',
+                                    }}
+                                >
+                                    <Database size={10} />
+                                    <span style={{ fontWeight: 600, marginRight: '2px' }}>RAG:</span>
+                                    <span className="max-w-[100px] truncate">{selectedSubject}</span>
+                                    <Lock size={9} style={{ color: 'var(--vs-text-dim)', marginLeft: '2px' }} />
+                                </span>
+                            ) : (
+                                // User-uploaded doc — allow deselect with ×
+                                <button
+                                    onClick={() => selectDocumentForAnalysis(null)}
+                                    title="RAG active — click to deselect"
+                                    className="inline-flex items-center gap-1 text-2xs cursor-pointer"
+                                    style={{
+                                        padding:      '2px 6px',
+                                        borderRadius: '2px',
+                                        background:   'var(--vs-surface)',
+                                        border:       '1px solid var(--vs-border-hi)',
+                                        color:        'var(--vs-text)',
+                                    }}
+                                >
+                                    <Database size={10} />
+                                    <span style={{ fontWeight: 600, marginRight: '2px' }}>RAG:</span>
+                                    <span className="max-w-[100px] truncate">{selectedDocumentForAnalysis}</span>
+                                    <span style={{ color: 'var(--vs-text-dim)', marginLeft: '1px' }}>×</span>
+                                </button>
+                            )}
                         </Animate>
                     )}
                 </div>

@@ -215,7 +215,7 @@ const CriticalThinkingCue = ({ icon: Icon, label, text, color, onClick }) => {
 
 
 
-function MessageBubble({ sender, text, thinking, references, timestamp, sourcePipeline, isStreaming, criticalThinkingCues, onCueClick, messageId, logId, status, onAnalyze, steps, confidenceScore, historyVersions, isLastAiMessage, onTryAgain, isError }) {
+function MessageBubble({ sender, text, thinking, references, timestamp, sourcePipeline, isStreaming, criticalThinkingCues, onCueClick, messageId, logId, status, onAnalyze, steps, confidenceScore, historyVersions, isLastAiMessage, onTryAgain, isError, xpDelta }) {
     const isUser = sender === 'user';
     const [currentVersionIndex, setCurrentVersionIndex] = useState(historyVersions ? historyVersions.length - 1 : 0);
 
@@ -325,15 +325,15 @@ function MessageBubble({ sender, text, thinking, references, timestamp, sourcePi
                         >
                             {activeIsStreaming
                                 ? <AnimatedThinking content={thinkingContent || ''} />
-                                : <div className="prose prose-xs dark:prose-invert max-w-none text-text-muted-light dark:text-text-muted-dark" dangerouslySetInnerHTML={createMarkup(thinkingContent)} />
+                                : <div className="prose prose-xs dark:prose-invert max-w-none text-[#b0b0b0]" dangerouslySetInnerHTML={createMarkup(thinkingContent)} />
                             }
                         </ThinkingDropdown>
                     </div>
                 )}
 
-                <div className={`message-bubble relative px-3 py-1.5 rounded-lg break-words ${isUser
-                    ? 'bg-gray-800 text-white border border-gray-700'
-                    : 'bg-gray-900/80 text-gray-100 border border-gray-800'
+                <div className={`message-bubble relative px-4 py-2.5 rounded-lg break-words ${isUser
+                    ? 'bg-white/10 text-white border border-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
+                    : 'bg-[#1a1a1a] text-white border border-[#4a4a4a] shadow-[0_2px_12px_rgba(0,0,0,0.4)]'
                     }`}>
 
                     {/* Status Badge (like Tutor Mode) */}
@@ -345,7 +345,7 @@ function MessageBubble({ sender, text, thinking, references, timestamp, sourcePi
                         </div>
                     )}
 
-                    <div ref={contentRef} className="prose prose-xs dark:prose-invert max-w-none message-content text-sm leading-snug">
+                    <div ref={contentRef} className="prose prose-xs dark:prose-invert max-w-none message-content text-sm leading-snug text-white">
                         {activeIsError ? (
                             <div className="flex flex-col gap-3 py-2">
                                 <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
@@ -354,7 +354,7 @@ function MessageBubble({ sender, text, thinking, references, timestamp, sourcePi
                                     </div>
                                     <div className="flex-1">
                                         <h4 className="text-red-500 font-bold text-sm mb-1 uppercase tracking-wider">Service Interruption</h4>
-                                        <p className="text-gray-200 text-sm leading-relaxed">
+                                        <p className="text-white text-sm leading-relaxed">
                                             {mainContent || "Our AI service is experiencing a temporary hiccup. Please try again in a few moments."}
                                         </p>
                                     </div>
@@ -376,6 +376,32 @@ function MessageBubble({ sender, text, thinking, references, timestamp, sourcePi
                         )}
                     </div>
 
+
+                    {/* XP Delta Badge — visible on tutor bot responses only */}
+                    {isTutor && !isUser && !activeIsStreaming && xpDelta && (
+                        <div
+                            className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full text-[11px] font-bold select-none"
+                            style={{
+                                background: xpDelta.type === 'gain'
+                                    ? 'rgba(107, 207, 127, 0.15)'
+                                    : xpDelta.type === 'loss'
+                                        ? 'rgba(255, 107, 107, 0.15)'
+                                        : 'rgba(150, 150, 150, 0.12)',
+                                color: xpDelta.type === 'gain' ? '#6bcf7f'
+                                    : xpDelta.type === 'loss' ? '#ff6b6b'
+                                    : '#aaa',
+                                border: `1px solid ${xpDelta.type === 'gain'
+                                    ? 'rgba(107, 207, 127, 0.35)'
+                                    : xpDelta.type === 'loss'
+                                        ? 'rgba(255, 107, 107, 0.35)'
+                                        : 'rgba(150,150,150,0.25)'}`,
+                                animation: 'xpPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
+                            }}
+                            title={`${xpDelta.label} (${xpDelta.classification || ''} at ${xpDelta.cognitiveLevel || ''})`}
+                        >
+                            &#9889; {xpDelta.label}
+                        </div>
+                    )}
 
                     <div className="flex items-center justify-start mt-2 text-[11px] gap-2 select-none">
                         {/* Version Pagination */}

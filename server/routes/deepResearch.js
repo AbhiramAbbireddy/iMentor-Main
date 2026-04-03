@@ -8,12 +8,109 @@ const router = express.Router();
 const deepResearchOrchestrator = require('../services/deepResearchOrchestrator');
 const factCheckingService = require('../services/factCheckingService');
 const ResearchCache = require('../models/ResearchCache');
+const ResearchJob = require('../models/ResearchJob');
+const { enqueueResearchJob, getJobStatus, listUserJobs } = require('../workers/researchWorker');
 
 /**
- * POST /api/deep-research/search
- * Basic deep research endpoint (Task 1.3.1).
- * Body: { query, depthLevel?, conversationHistory? }
+ * POST /api/deep-research/start
+ * FIRE-AND-FORGET: Create a research job and return immediately.
+ * Body: { query, nature, depth }
+ * nature: 'general' | 'academic' | 'research'
+ * depth:  'low' | 'medium' | 'high'
  */
+router.post('/start', async (req, res) => {
+    const { query, nature = 'academic', depth = 'medium' } = req.body;
+    const userId = req.user?._id || req.user?.userId;
+
+    if (!query || typeof query !== 'string' || query.trim().length < 5) {
+        return res.status(400).json({ success: false, message: 'A research query of at least 5 characters is required.' });
+    }
+
+    const validNatures = ['general', 'academic', 'research'];
+    const validDepths  = ['low', 'medium', 'high'];
+    if (!validNatures.includes(nature)) {
+        return res.status(400).json({ success: false, message: `nature must be one of: ${validNatures.join(', ')}` });
+    }
+    if (!validDepths.includes(depth)) {
+        return res.status(400).json({ success: false, message: `depth must be one of: ${validDepths.join(', ')}` });
+    }
+
+    try {
+        const job = await enqueueResearchJob({ query: query.trim(), nature, depth, userId });
+        return res.status(202).json({
+            success: true,
+            message: 'Research job queued. It will run in the background.',
+            jobId:   job._id,
+            query:   job.query,
+            nature:  job.nature,
+            depth:   job.depth,
+            status:  job.status,
+        });
+    } catch (err) {
+        console.error('[DeepResearch] Failed to enqueue job:', err.message);
+        return res.status(500).json({ success: false, message: 'Failed to start research job.', error: err.message });
+    }
+});
+
+/**
+ * GET /api/deep-research/jobs
+ * List all research jobs for the authenticated user.
+ */
+router.get('/jobs', async (req, res) => {
+    const userId = req.user?._id || req.user?.userId;
+    try {
+        const jobs = await listUserJobs(userId, 100);
+        return res.status(200).json({ success: true, data: jobs });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to list research jobs.', error: err.message });
+    }
+});
+
+/**
+ * GET /api/deep-research/jobs/:jobId
+ * Get status and (if completed) result reference for a specific job.
+ */
+router.get('/jobs/:jobId', async (req, res) => {
+    const userId = req.user?._id || req.user?.userId;
+    try {
+        const jobStatus = await getJobStatus(req.params.jobId, userId);
+        if (!jobStatus) {
+            return res.status(404).json({ success: false, message: 'Job not found.' });
+        }
+        // If completed, also fetch the report from ResearchCache
+        let report = null;
+        if (jobStatus.status === 'completed' && jobStatus.resultId) {
+            report = await ResearchCache.findById(jobStatus.resultId)
+                .select('query title researchReport sources evidenceProfile providerBreakdown overallConfidenceScore createdAt')
+                .lean();
+        }
+        return res.status(200).json({ success: true, data: { ...jobStatus, report } });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to get job status.', error: err.message });
+    }
+});
+
+/**
+ * GET /api/deep-research/jobs/:jobId/report
+ * Fetch the full cached research report for a completed job.
+ */
+router.get('/jobs/:jobId/report', async (req, res) => {
+    const userId = req.user?._id || req.user?.userId;
+    try {
+        const job = await ResearchJob.findOne({ _id: req.params.jobId, userId }).lean();
+        if (!job) return res.status(404).json({ success: false, message: 'Job not found.' });
+        if (job.status !== 'completed' || !job.resultId) {
+            return res.status(425).json({ success: false, message: `Job is ${job.status}. Report not ready yet.` });
+        }
+        const report = await ResearchCache.findById(job.resultId).lean();
+        if (!report) return res.status(404).json({ success: false, message: 'Report not found in cache.' });
+        return res.status(200).json({ success: true, data: report });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to fetch report.', error: err.message });
+    }
+});
+
+
 router.post('/search', async (req, res) => {
     const { query, depthLevel, conversationHistory } = req.body;
     const userId = req.user?._id || req.user?.userId;
@@ -173,32 +270,41 @@ router.post('/fact-check', async (req, res) => {
 
 /**
  * GET /api/deep-research/history
- * Get user's recent research history.
+ * Get user's research history — returns both job records and older cache entries.
  */
 router.get('/history', async (req, res) => {
     const userId = req.user?._id || req.user?.userId;
-
     try {
-        const history = await ResearchCache.find({ userId })
-            .select('query sourceBreakdown metadata createdAt')
+        // Primary: ResearchJob records (includes status, nature, depth)
+        const jobs = await listUserJobs(userId, 100);
+
+        // Legacy: ResearchCache entries not associated with a job
+        const legacy = await ResearchCache.find({ userId })
+            .select('query title overallConfidenceScore sources createdAt evidenceProfile')
             .sort({ createdAt: -1 })
-            .limit(20)
+            .limit(50)
             .lean();
 
         return res.status(200).json({
             success: true,
-            data: history.map(h => ({
-                query: h.query,
-                sourceBreakdown: h.sourceBreakdown,
-                depthLevel: h.metadata?.depthLevel || 'standard',
-                createdAt: h.createdAt,
-            })),
+            data: {
+                jobs,
+                legacy: legacy.map(h => ({
+                    _id:          h._id,
+                    query:        h.query,
+                    title:        h.title || h.query,
+                    confidenceScore: h.overallConfidenceScore,
+                    totalSources: h.sources?.length || 0,
+                    createdAt:    h.createdAt,
+                })),
+            },
         });
     } catch (error) {
         console.error('[DeepResearch Route] History fetch failed:', error.message);
         return res.status(500).json({ success: false, message: 'Failed to fetch research history.' });
     }
 });
+
 
 /**
  * GET /api/deep-research/cache/:queryHash

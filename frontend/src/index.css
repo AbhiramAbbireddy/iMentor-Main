@@ -18,28 +18,28 @@
    * ───────────────────────────────────────────────────────────────────────── */
 
   :root {
-    /* Shell backgrounds */
-    --vs-bg:          #1e1e1e;   /* editor / main canvas          */
-    --vs-sidebar:     #252526;   /* sidebar, left/right panels    */
-    --vs-panel:       #2d2d2d;   /* activity bar, terminal bg     */
-    --vs-surface:     #333333;   /* card / raised surface         */
-    --vs-surface-hi:  #3a3a3a;   /* hover state on surface        */
+    /* Shell backgrounds — richer surfaces for executive look */
+    --vs-bg:          #121212;   /* editor / main canvas          */
+    --vs-sidebar:     #1a1a1a;   /* sidebar, left/right panels    */
+    --vs-panel:       #1e1e1e;   /* activity bar, terminal bg     */
+    --vs-surface:     #242424;   /* card / raised surface         */
+    --vs-surface-hi:  #2e2e2e;   /* hover state on surface        */
 
-    /* Borders */
-    --vs-border-lo:   #2d2d2d;   /* hairline dividers             */
-    --vs-border:      #3c3c3c;   /* default border                */
-    --vs-border-hi:   #505050;   /* focused / active border       */
+    /* Borders — sharper edges for executive look */
+    --vs-border-lo:   #383838;   /* hairline dividers             */
+    --vs-border:      #4a4a4a;   /* default border                */
+    --vs-border-hi:   #666666;   /* focused / active border       */
 
-    /* Text */
-    --vs-text:        #cccccc;   /* primary text (VS Code exact)  */
-    --vs-text-lo:     #999999;   /* secondary / muted             */
-    --vs-text-dim:    #666666;   /* placeholders, disabled        */
-    --vs-text-inv:    #1e1e1e;   /* text on light surfaces        */
+    /* Text — full-white for maximum brightness & readability */
+    --vs-text:        #ffffff;   /* primary text — full white      */
+    --vs-text-lo:     #b0b0b0;   /* secondary / muted             */
+    --vs-text-dim:    #777777;   /* placeholders, disabled        */
+    --vs-text-inv:    #0d0d0d;   /* text on light surfaces        */
 
     /* Interactive */
-    --vs-hover:       rgba(255,255,255,0.06);
-    --vs-active:      rgba(255,255,255,0.12);
-    --vs-focus-ring:  rgba(255,255,255,0.18);
+    --vs-hover:       rgba(255,255,255,0.08);
+    --vs-active:      rgba(255,255,255,0.14);
+    --vs-focus-ring:  rgba(255,255,255,0.22);
 
     /* Code block background (separate from shell) */
     --vs-code-bg:     #282c34;
@@ -343,7 +343,8 @@
       border: none;
     }
 
-    strong { font-weight: 600; color: var(--vs-text); }
+    strong { font-weight: 700; color: #ffffff; }
+    em     { color: var(--vs-text); }
   }
 
   /* Compact message content */
@@ -382,11 +383,12 @@
   /* Primary: light fill (VS Code "default" button) */
   .btn-primary {
     @apply btn;
-    background: var(--vs-text);
-    color: var(--vs-text-inv);
-    border-color: var(--vs-text);
+    background: #ffffff;
+    color: #0d0d0d;
+    border-color: #ffffff;
+    font-weight: 600;
   }
-  .btn-primary:hover:not(:disabled) { background: #e0e0e0; }
+  .btn-primary:hover:not(:disabled) { background: #e8e8e8; }
 
   /* Secondary: ghost with border */
   .btn-secondary {
@@ -439,11 +441,12 @@
     box-shadow: 0 0 0 2px var(--vs-focus-ring);
   }
 
-  /* ── Cards ───────────────────────────────────────────────────────────────── */
+  /* ── Cards — executive styling ────────────────────────────────────────── */
   .card-base {
     border: 1px solid var(--vs-border);
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--vs-sidebar);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
   }
   .card-header-base {
     padding: 0.625rem 0.875rem;
@@ -451,6 +454,7 @@
     font-weight: 600;
     border-bottom: 1px solid var(--vs-border);
     color: var(--vs-text);
+    letter-spacing: 0.01em;
   }
 
   /* ── Panel resize handle ─────────────────────────────────────────────────── */
@@ -609,4 +613,12 @@
   .bg-grid-slate-300\/\[0\.2\] {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(100 100 100 / 0.15)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
   }
+}
+
+
+/* ── XP badge pop animation (tutor mode) ─────────────────────────────────── */
+@keyframes xpPop {
+  0%   { transform: scale(0.4) translateY(4px); opacity: 0; }
+  65%  { transform: scale(1.18) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
 }

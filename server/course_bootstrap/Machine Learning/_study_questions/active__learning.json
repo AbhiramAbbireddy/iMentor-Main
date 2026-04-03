@@ -6,110 +6,108 @@
   "mcq": [
     {
       "id": "mcq_1",
-      "question": "What is the primary goal of active learning in machine learning?",
+      "question": "Which of the following best describes active learning in the context of machine learning?",
       "options": [
-        "A) To minimize the number of labeled examples needed for training.",
-        "B) To increase the accuracy of the model on the training set.",
-        "C) To reduce the computational complexity of the model.",
-        "D) To enhance the model's ability to generalize to unseen data."
+        "A) A method where the learner provides feedback to improve the model’s performance.",
+        "B) A technique where the model learns without any human intervention.",
+        "C) A process where the model selects its own training data.",
+        "D) A strategy where the learner avoids giving any feedback to the model."
       ],
       "correct_option": "A",
-      "explanation": "Active learning aims to select the most informative examples to label, thereby reducing the number of labeled examples needed for training, which is the primary goal.",
+      "explanation": "Active learning involves the learner providing feedback to the model, which is then used to improve the model’s performance. This is in contrast to passive learning, where the model learns from the provided data without any additional input from the learner.",
       "difficulty": "beginner",
       "bloom_level": "remember"
     },
     {
       "id": "mcq_2",
-      "question": "Which of the following is a key characteristic of active learning?",
+      "question": "In which scenario would active learning be most beneficial?",
       "options": [
-        "A) The learner passively receives labeled examples.",
-        "B) The learner actively selects examples to label.",
-        "C) The learner randomly selects examples to label.",
-        "D) The learner only uses unlabeled data for training."
+        "A) When there is an abundance of labeled data.",
+        "B) When labeled data is scarce or expensive to obtain.",
+        "C) When the model has already been trained and needs no further improvement.",
+        "D) When the learner has no interest in improving the model’s performance."
       ],
       "correct_option": "B",
-      "explanation": "In active learning, the learner actively selects examples to label, which is a key characteristic of this paradigm.",
+      "explanation": "Active learning is particularly useful when labeled data is scarce or expensive to obtain, as it allows the model to learn more efficiently with the help of the learner’s feedback.",
       "difficulty": "intermediate",
-      "bloom_level": "understand"
+      "bloom_level": "apply"
     },
     {
       "id": "mcq_3",
-      "question": "How does active learning improve the performance of a machine learning model?",
+      "question": "What is the primary advantage of active learning over traditional supervised learning?",
       "options": [
-        "A) By increasing the size of the training dataset.",
-        "B) By reducing the number of labeled examples needed for training.",
-        "C) By enhancing the model's feature extraction capabilities.",
-        "D) By improving the model's regularization techniques."
+        "A) Active learning requires less labeled data to achieve the same performance.",
+        "B) Active learning can be applied to any type of data.",
+        "C) Active learning is faster and more efficient.",
+        "D) Active learning does not require any human intervention."
       ],
-      "correct_option": "B",
-      "explanation": "Active learning improves the performance of a machine learning model by reducing the number of labeled examples needed for training, which can lead to better performance with fewer labeled examples.",
+      "correct_option": "A",
+      "explanation": "Active learning can reduce the need for large amounts of labeled data by using the learner’s feedback to refine the model, making it a more efficient and effective learning process.",
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "mcq_4",
-      "question": "Which scenario best illustrates the concept of active learning?",
+      "question": "Which of the following is NOT a common method used in active learning?",
       "options": [
-        "A) A model is trained on a large dataset of labeled examples.",
-        "B) A model is trained on a small dataset of labeled examples, and the learner actively selects examples to label.",
-        "C) A model is trained on a dataset of unlabeled examples.",
-        "D) A model is trained on a dataset of partially labeled examples."
+        "A) Query by committee",
+        "B) Pool-based sampling",
+        "C) Random selection",
+        "D) Expected model change"
       ],
-      "correct_option": "B",
-      "explanation": "A model being trained on a small dataset of labeled examples, and the learner actively selecting examples to label, is the best scenario to illustrate the concept of active learning.",
+      "correct_option": "C",
+      "explanation": "Random selection is not a common method used in active learning. Query by committee, pool-based sampling, and expected model change are all methods used to select the most informative data points for the learner to label.",
       "difficulty": "advanced",
-      "bloom_level": "analyze"
+      "bloom_level": "evaluate"
     },
     {
       "id": "mcq_5",
-      "question": "What is the main advantage of active learning over passive learning?",
+      "question": "In the context of personalized medicine, how can active learning be applied?",
       "options": [
-        "A) Passive learning requires more labeled examples.",
-        "B) Passive learning is more computationally efficient.",
-        "C) Active learning can achieve better performance with fewer labeled examples.",
-        "D) Active learning is easier to implement."
+        "A) By using the patient’s feedback to tailor the treatment plan.",
+        "B) By selecting the most common diseases to focus on.",
+        "C) By avoiding any interaction with the patient.",
+        "D) By using the patient’s medical history to predict future diseases."
       ],
-      "correct_option": "C",
-      "explanation": "The main advantage of active learning over passive learning is that it can achieve better performance with fewer labeled examples, making it more efficient.",
+      "correct_option": "A",
+      "explanation": "Active learning can be applied in personalized medicine by using the patient’s feedback to tailor the treatment plan, making it more effective for the individual patient.",
       "difficulty": "advanced",
-      "bloom_level": "evaluate"
+      "bloom_level": "create"
     }
   ],
   "short_answer": [
     {
       "id": "sa_1",
-      "question": "Explain how active learning can be used in a real-world application such as sentiment analysis.",
-      "model_answer": "In sentiment analysis, active learning can be used to select the most ambiguous or representative texts for labeling. By focusing on these examples, the model can improve its understanding of sentiment nuances, leading to better performance with fewer labeled examples. This is particularly useful when labeling data is costly or time-consuming.",
+      "question": "Explain the concept of active learning and how it differs from traditional supervised learning.",
+      "model_answer": "Active learning is a technique where the learner provides feedback to the model, which is then used to improve the model’s performance. This is in contrast to traditional supervised learning, where the model learns from labeled data without any additional input from the learner. Active learning is particularly useful when labeled data is scarce or expensive to obtain, as it allows the model to learn more efficiently with the help of the learner’s feedback.",
       "key_concepts": [
         "active learning",
-        "sentiment analysis",
-        "ambiguous texts"
+        "supervised learning",
+        "learner’s feedback"
       ],
       "difficulty": "intermediate",
       "bloom_level": "apply"
     },
     {
       "id": "sa_2",
-      "question": "Compare and contrast active learning with passive learning in terms of efficiency and performance.",
-      "model_answer": "Active learning is generally more efficient than passive learning because it focuses on selecting the most informative examples to label, reducing the number of labeled examples needed for training. This can lead to better performance with fewer labeled examples. In contrast, passive learning uses a fixed set of labeled examples, which may not be the most informative, leading to potentially worse performance with the same amount of labeled data.",
+      "question": "Discuss the benefits of active learning in scenarios where labeled data is scarce.",
+      "model_answer": "In scenarios where labeled data is scarce, active learning can be highly beneficial. By actively participating, the learner can help the model learn more efficiently, reducing the need for large amounts of labeled data. This makes the learning process more efficient and effective, especially in fields such as medical diagnosis and natural language processing.",
       "key_concepts": [
-        "active learning",
-        "passive learning",
-        "efficiency",
-        "performance"
+        "labeled data scarcity",
+        "efficient learning",
+        "medical diagnosis"
       ],
-      "difficulty": "intermediate",
-      "bloom_level": "analyze"
+      "difficulty": "advanced",
+      "bloom_level": "evaluate"
     },
     {
       "id": "sa_3",
-      "question": "Design a scenario where active learning could be particularly beneficial and explain why.",
-      "model_answer": "In a scenario where labeling data is extremely costly or time-consuming, such as in medical imaging or legal document review, active learning can be particularly beneficial. By focusing on the most informative examples to label, it can significantly reduce the number of labeled examples needed, making the process more efficient and cost-effective. This is because the model can learn more effectively from a smaller, more representative set of labeled data.",
+      "question": "Provide an example of how active learning can be applied in a real-world scenario.",
+      "model_answer": "An example of active learning in a real-world scenario is personalized medicine. In this context, the patient’s feedback can be used to tailor the treatment plan, making it more effective for the individual patient. This demonstrates the practical application of active learning in improving patient outcomes.",
       "key_concepts": [
-        "costly labeling",
-        "time-consuming labeling",
-        "active learning",
-        "representative examples"
+        "personalized medicine",
+        "patient’s feedback",
+        "treatment plan"
       ],
       "difficulty": "advanced",
       "bloom_level": "create"
@@ -119,32 +117,32 @@
     {
       "id": "fc_1",
       "front": "Active Learning",
-      "back": "A machine learning paradigm where the learner actively selects examples to label, aiming to reduce the number of labeled examples needed for training, thereby improving model performance.",
-      "hint": "Think of it as a more efficient way to learn."
+      "back": "A method where the learner provides feedback to improve the model’s performance. Particularly useful when labeled data is scarce or expensive to obtain.",
+      "hint": "Think of the learner as a guide for the model."
     },
     {
       "id": "fc_2",
-      "front": "Labeled Examples",
-      "back": "Examples in a dataset that have been manually annotated with the correct output, used for training machine learning models.",
-      "hint": "These are the 'answers' in your training data."
+      "front": "Query by Committee",
+      "back": "A method in active learning where the model selects data points based on the disagreement among multiple models (experts).",
+      "hint": "Models disagree, select those points."
     },
     {
       "id": "fc_3",
-      "front": "Model Selection",
-      "back": "The process of choosing the next set of examples to label based on the model's predictions, aiming to maximize the information gained from each labeled example.",
-      "hint": "It's like choosing the most informative questions to ask."
+      "front": "Pool-Based Sampling",
+      "back": "A strategy in active learning where the model selects a batch of data points to be labeled, aiming to maximize the information gain.",
+      "hint": "Select a batch, gain information."
     },
     {
       "id": "fc_4",
-      "front": "Iterative Process",
-      "back": "A cycle where the model makes predictions, selects the next set of examples to label, and then uses the new labeled data to improve its predictions, repeating this cycle until convergence.",
-      "hint": "Think of it as a loop that improves over time."
+      "front": "Expected Model Change",
+      "back": "A criterion in active learning where the model selects data points that are expected to cause the most significant change in the model’s parameters.",
+      "hint": "Select for maximum change."
     },
     {
       "id": "fc_5",
-      "front": "Sentiment Analysis",
-      "back": "A task in natural language processing where the model predicts the sentiment (positive, negative, or neutral) of a given text, often using active learning to select the most ambiguous texts for labeling.",
-      "hint": "It's like grading essays to improve your understanding of the subject."
+      "front": "Supervised Learning",
+      "back": "A traditional machine learning approach where the model learns from labeled data without any additional input from the learner.",
+      "hint": "Learn from labeled data, no feedback."
     }
   ],
   "topic_id": "learning_paradigms_ii"

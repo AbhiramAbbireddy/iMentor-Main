@@ -11,8 +11,7 @@ import CenterPanel from './components/layout/CenterPanel.jsx';
 import RightPanel from './components/layout/RightPanel.jsx';
 import LeftCollapsedNav from './components/layout/LeftCollapsedNav.jsx';
 import RightCollapsedNav from './components/layout/RightCollapsedNav.jsx';
-import ChatHistorySidebar from './components/chat/ChatHistorySidebar.jsx';
-import KnowledgeBaseModal from './components/documents/KnowledgeBaseModal.jsx';
+import CourseViewerPanel from './components/course/CourseViewerPanel.jsx';
 import api from './services/api.js';
 import toast from 'react-hot-toast';
 import { GraduationCap, AlertCircle } from 'lucide-react';
@@ -42,6 +41,7 @@ const SkillTreeGameMap     = React.lazy(() => import('./components/gamification/
 const SkillTreeGames       = React.lazy(() => import('./components/gamification/SkillTreeGames.jsx'));
 const TutorModePage        = React.lazy(() => import('./components/tutor/TutorModePage.jsx'));
 const DeepResearchPage     = React.lazy(() => import('./components/research/DeepResearchPage.jsx'));
+const CourseExplorerPage   = React.lazy(() => import('./components/course/CourseExplorerPage.jsx'));
 const ResearchHistory      = React.lazy(() => import('./components/research/ResearchHistory.jsx'));
 const ResearchDetailView   = React.lazy(() => import('./components/research/ResearchDetailView.jsx'));
 
@@ -80,6 +80,7 @@ function MainAppLayout({
     const {
         currentSessionId,
         isLeftPanelOpen,
+        setIsLeftPanelOpen,
         isRightPanelOpen,
         setSessionId: setGlobalSessionId,
         initialPromptForNewSession,
@@ -96,8 +97,6 @@ function MainAppLayout({
         setLastTutorSessionId
     } = useAppState();
 
-    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-    const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(false);
     const [isChatProcessing, setIsChatProcessing] = useState(false);
 
     const handleChatProcessingStatusChange = (isLoading) => {
@@ -137,7 +136,10 @@ function MainAppLayout({
         }
     };
 
-    const toggleHistorySidebar = () => setIsHistoryOpen(prev => !prev);
+    // CourseViewerPanel -> chat: injects prompt as next user message
+    const handleCourseChat = useCallback((prompt) => {
+        setInitialPromptForNewSession(prompt);
+    }, [setInitialPromptForNewSession]);
 
     return (
         <>
@@ -147,53 +149,27 @@ function MainAppLayout({
                 user={regularUser}
                 onLogout={handleRegularUserLogout}
                 onNewChat={handleNewChat}
-                onHistoryClick={toggleHistorySidebar}
+                onHistoryClick={() => setIsLeftPanelOpen(true)}
                 orchestratorStatus={orchestratorStatus}
                 isChatProcessing={isChatProcessing}
             />
             {/* AppLayout */}
             <div className="flex flex-1 overflow-hidden pt-11 relative" style={{ background: 'var(--vs-bg)' }}>
-                {/* Sidebar (Desktop push layout) */}
-                <div className={`hidden md:block h-full transition-[width] duration-300 ease-in-out ${isHistoryOpen ? 'w-80' : 'w-0'} overflow-hidden`}>
-                    <ChatHistorySidebar
-                        isOpen={isHistoryOpen}
-                        currentSessionId={currentSessionId}
-                        onSelectSession={handleSelectSessionFromHistory}
-                    />
-                </div>
-
-                {/* Sidebar (Mobile overlay layout) */}
-                {isHistoryOpen && (
-                    <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsHistoryOpen(false)}>
-                        <div
-                            className="absolute left-0 top-16 bottom-0 w-[86vw] max-w-[320px]"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <ChatHistorySidebar
-                                isOpen={isHistoryOpen}
-                                currentSessionId={currentSessionId}
-                                onSelectSession={handleSelectSessionFromHistory}
-                                onClose={() => setIsHistoryOpen(false)}
-                            />
-                        </div>
-                    </div>
-                )}
-
                 {/* MainChatArea */}
                 <div className="flex-1 flex overflow-hidden min-w-0">
                     {isLeftPanelOpen ? (
                         <aside className="w-full md:w-72 lg:w-80 xl:w-96 overflow-y-auto p-3 sm:p-4 flex-shrink-0 custom-scrollbar transition-transform duration-300 ease-out" style={{ background: 'var(--vs-sidebar)', borderRight: '1px solid var(--vs-border)' }}>
                             <LeftPanel
                                 isChatProcessing={isChatProcessing}
-                                onHistoryClick={toggleHistorySidebar}
-                                onKnowledgeBaseClick={() => setIsKnowledgeBaseOpen(true)}
+                                currentSessionId={currentSessionId}
+                                handleSelectSessionFromHistory={handleSelectSessionFromHistory}
                             />
                         </aside>
                     ) : (
                         <LeftCollapsedNav
                             isChatProcessing={isChatProcessing}
-                            onHistoryClick={toggleHistorySidebar}
-                            onKnowledgeBaseClick={() => setIsKnowledgeBaseOpen(true)}
+                            onHistoryClick={() => setIsLeftPanelOpen(true)}
+                            onKnowledgeBaseClick={() => setIsLeftPanelOpen(true)}
                         />
                     )}
 
@@ -219,10 +195,7 @@ function MainAppLayout({
             </div>
 
             {/* FloatingModals */}
-            <KnowledgeBaseModal
-                isOpen={isKnowledgeBaseOpen}
-                onClose={() => setIsKnowledgeBaseOpen(false)}
-            />
+            <CourseViewerPanel onChatMessage={handleCourseChat} />
         </>
     );
 }
@@ -488,6 +461,7 @@ function App() {
                         <Route path="/tools/deep-research" element={<DeepResearchPage />} />
                         <Route path="/tools/deep-research/history" element={<ResearchHistory />} />
                         <Route path="/tools/deep-research/view/:id" element={<ResearchDetailView />} />
+                        <Route path="/courses" element={<CourseExplorerPage />} />
                         {/* Gamification Routes */}
                         <Route path="/gamification/bounties" element={<BountyCreditsPage />} />
                         <Route path="/gamification/credits" element={<BountyCreditsPage />} />

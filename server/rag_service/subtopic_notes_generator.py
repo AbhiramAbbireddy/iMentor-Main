@@ -29,6 +29,7 @@ import urllib.request
 from typing import Dict, List, Optional, Tuple
 
 import config
+from sglang_caps import get_model_max_context
 
 logger = logging.getLogger(__name__)
 
@@ -394,11 +395,16 @@ def _call_sglang(prompt: str) -> Optional[Dict]:
             teaching_context: str = Field(description="3-4 paragraph rich explanation for AI tutor system prompt")
         
         logger.info(f"STN: Using SGLang model {_SGLANG_HEAVY_MODEL} with constrained JSON")
-        
+
+        # Compute safe completion budget from the live model context length
+        _stn_system = "You are an expert educator. Always output valid JSON."
+        _stn_input_tokens = int((len(_stn_system) + len(prompt)) / 3.5)
+        _stn_max_tokens = max(512, get_model_max_context() - _stn_input_tokens - 256)
+
         response = _sglang_client.chat.completions.create(
             model=_SGLANG_HEAVY_MODEL,
             messages=[
-                {"role": "system", "content": "You are an expert educator. Always output valid JSON."},
+                {"role": "system", "content": _stn_system},
                 {"role": "user", "content": prompt}
             ],
             response_format={
@@ -410,7 +416,7 @@ def _call_sglang(prompt: str) -> Optional[Dict]:
                 }
             },
             temperature=0.1,
-            max_tokens=3000
+            max_tokens=_stn_max_tokens
         )
         
         content = response.choices[0].message.content

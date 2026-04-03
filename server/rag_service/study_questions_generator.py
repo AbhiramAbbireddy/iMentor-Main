@@ -36,6 +36,7 @@ import uuid
 from typing import Dict, List, Optional
 
 import config
+from sglang_caps import get_model_max_context
 from prompts import STUDY_QUESTIONS_GENERATION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -214,14 +215,20 @@ def _call_llm(prompt: str) -> Optional[str]:
     # ── 1. SGLang (primary) ───────────────────────────────────────────────────
     if _sglang_client:
         try:
+            # Compute a safe completion budget from the live model context length
+            _SGLANG_MAX_CONTEXT = get_model_max_context()  # reads /v1/models once, then cached
+            _SAFETY_BUFFER = 256
+            system_msg = "You are an expert curriculum designer. Output only valid JSON."
+            estimated_input_tokens = int((len(system_msg) + len(prompt)) / 3.5)
+            safe_max_tokens = max(512, _SGLANG_MAX_CONTEXT - estimated_input_tokens - _SAFETY_BUFFER)
             resp = _sglang_client.chat.completions.create(
                 model=config.SGLANG_HEAVY_MODEL,
                 messages=[
-                    {"role": "system", "content": "You are an expert curriculum designer. Output only valid JSON."},
+                    {"role": "system", "content": system_msg},
                     {"role": "user",   "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=8192,
+                max_tokens=safe_max_tokens,
             )
             text = resp.choices[0].message.content.strip() if resp.choices else ""
             if text:

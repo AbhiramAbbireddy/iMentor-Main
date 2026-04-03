@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 import config
+from sglang_caps import get_model_max_context
 from prompts import SKILL_TREE_GENERATION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -209,14 +210,20 @@ def _call_llm(prompt: str) -> Optional[str]:
     # ── 1. SGLang (primary) ───────────────────────────────────────────────────
     if _sglang_client:
         try:
+            # Compute a safe completion budget from the live model context length
+            _SGLANG_MAX_CONTEXT = get_model_max_context()  # reads /v1/models once, then cached
+            _SAFETY_BUFFER = 256
+            system_msg = "You are an expert curriculum designer. Output only valid JSON."
+            estimated_input_tokens = int((len(system_msg) + len(prompt)) / 3.5)
+            safe_max_tokens = max(512, _SGLANG_MAX_CONTEXT - estimated_input_tokens - _SAFETY_BUFFER)
             resp = _sglang_client.chat.completions.create(
                 model=config.SGLANG_HEAVY_MODEL,
                 messages=[
-                    {"role": "system", "content": "You are an expert curriculum designer. Output only valid JSON."},
+                    {"role": "system", "content": system_msg},
                     {"role": "user",   "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=6000,
+                max_tokens=safe_max_tokens,
             )
             text = resp.choices[0].message.content.strip() if resp.choices else ""
             if text:
@@ -475,6 +482,17 @@ def generate_skill_tree(
         return None
 
     curriculum_json = _curriculum_to_prompt_json(modules)
+
+    # Guard: if the curriculum JSON alone is too large for the model's context,
+    # truncate it so we always leave at least 1500 tokens for the completion.
+    _SGLANG_MAX_CONTEXT = get_model_max_context()  # reads /v1/models once, then cached
+    _MIN_COMPLETION_TOKENS = 1500
+    _SYSTEM_OVERHEAD_CHARS = 200   # system prompt chars
+    _MAX_CURRICULUM_CHARS = int((_SGLANG_MAX_CONTEXT - _MIN_COMPLETION_TOKENS) * 3.5) - _SYSTEM_OVERHEAD_CHARS
+    if len(curriculum_json) > _MAX_CURRICULUM_CHARS:
+        logger.warning(f"SkillTree: Curriculum too large ({len(curriculum_json)} chars) — truncating to {_MAX_CURRICULUM_CHARS} chars for SGLang context limit.")
+        curriculum_json = curriculum_json[:_MAX_CURRICULUM_CHARS] + "\n]"  # close the JSON array
+
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     prompt = SKILL_TREE_GENERATION_PROMPT.format(

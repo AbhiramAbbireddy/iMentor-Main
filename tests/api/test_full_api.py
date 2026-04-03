@@ -53,7 +53,7 @@ import requests
 
 
 # ── Config ───────────────────────────────────────────────────────────────────
-BASE    = "http://localhost:5001"
+BASE    = "http://localhost:5005"
 EMAIL   = "ultra.boy7@gmail.com"
 PASS    = "123456"
 TIMEOUT     = 30      # Fast REST requests (auth, CRUD)
