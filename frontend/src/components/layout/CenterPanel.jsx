@@ -231,7 +231,7 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
         // --- THIS IS THE FIX ---
         // Construct the full, correct API URL using the environment variable.
         const debugSuffix = new URLSearchParams(location.search).get('debug') === 'true' ? '?debug=true' : '';
-        const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:2000/api'}/chat/message${debugSuffix}`;
+        const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api'}/chat/message${debugSuffix}`;
 
         const response = await fetch(apiUrl, {
             // --- END OF FIX ---
@@ -628,7 +628,7 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
 
             // Forward to orchestrator
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:2000/api'}/chat/message`, {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api'}/chat/message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${regularUserToken}` },
                     body: JSON.stringify({
@@ -736,7 +736,8 @@ function CenterPanel({ messages, setMessages, currentSessionId, onChatProcessing
                             text: "Oops! It seems like the AI service is temporarily busy or unavailable. We're sorry for the interruption! You can try regenerating the response or check back in a moment.",
                             status: 'Service Error',
                             isError: true,
-                            originalError: errorMessage // Keep original error for debugging if needed
+                            originalError: errorMessage, // Keep original error for debugging if needed
+                            providerDetail: error.response?.data?.aiError || error.aiProviderDetail || undefined
                         }
                         : msg
                 ));

@@ -55,7 +55,7 @@ function QuizPanel({ selectedCourse, onQuestionChange, questionResults = {}, onR
         setLocalFeedback('');
 
         try {
-            const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:2000/api'}/chat/message`;
+            const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005/api'}/chat/message`;
 
             // Generate a unique session ID for this evaluation to avoid disturbing Socratic mode history
             const tempSessionId = `isolated-quiz-${Date.now()}`;

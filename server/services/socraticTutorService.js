@@ -190,10 +190,36 @@ Return ONLY valid JSON:
   "emotionalState": "CURIOUS|CONFIDENT|UNCERTAIN|FRUSTRATED|BORED",
   "effortLevel": "HIGH|MEDIUM|LOW",
   "specificGaps": [],
+  "priorKnowledge": false,
   "reasoning": "Brief one-sentence explanation of your classification"
-}`;
+}
+
+PRIOR KNOWLEDGE RULE: If the student's response shows they already know this topic well
+(confident explanation, correct examples, asks to skip), set "priorKnowledge": true
+AND set "understanding": "CORRECT" and "confidence": "HIGH".`;
 
     try {
+
+        const priorKnowledgeKeywords = [
+            /i (already |do |)(know|knew|understand|learned|studied)/i,
+            /i'?ve (implemented|used|built|written|done|solved|practiced)/i,
+            /i (am|'?m) (familiar|comfortable|confident) with/i,
+            /skip this|i know this|already covered/i
+        ];
+        const keywordMatch = priorKnowledgeKeywords.some(rx => rx.test(studentResponse));
+        if (keywordMatch && studentResponse.trim().length > 20) {
+            log.info('TUTOR', `⚡ Prior knowledge detected for "${moduleTitle}"`);
+            return {
+                understanding: 'CORRECT',
+                confidence: 'HIGH',
+                emotionalState: 'CONFIDENT',
+                effortLevel: 'HIGH',
+                specificGaps: [],
+                priorKnowledge: true,
+                reasoning: 'Student stated prior knowledge with explanation'
+            };
+        }
+
         const responseText = await generateWithFallback(
             [],
             prompt,
@@ -204,8 +230,15 @@ Return ONLY valid JSON:
 
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.priorKnowledge) {
+                parsed.understanding = 'CORRECT';
+                parsed.confidence = 'HIGH';
+                parsed.emotionalState = parsed.emotionalState || 'CONFIDENT';
+            }
+            return parsed;
         }
+        
         throw new Error('No JSON found in assessment response');
     } catch (error) {
         log.warn('TUTOR', `Assessment failed, using fallback: ${error.message}`);
@@ -879,6 +912,33 @@ CRITICAL RULES:
         } catch (_) { /* non-fatal */ }
     }
 
+    // ── Prior knowledge fast-path: skip LLM question generation ──────────────
+    if (priorKnowledge) {
+        const skipMsg = sanitizeGeneratedText(
+            `Great — you clearly already know **${safe(topic)}** well! ` +
+            `No need to spend time on what you already know. ` +
+            `Let's move on to the next concept. 🚀`
+        );
+        await setTutorSessionState(sessionId, {
+            ...state,
+            lastQuestion: skipMsg,
+            turnCount: turnCount + 1,
+            masteryScore: 5.0,
+            consecutiveCorrect: 2,
+            consecutiveWrong: 0
+        });
+        return {
+            followUpQuestion: skipMsg,
+            classification: 'CORRECT',
+            pedagogicalMove: 'SKIP_SUBTOPIC',
+            isMastered: true,
+            socraticState: 'MASTERY_ACHIEVED',
+            position,
+            masteryProgress: { current: 5.0, required: 3.5 },
+            topic
+        };
+    }
+
     let followUpQuestion = "";
     try {
         if (onToken && (llmConfig.llmProvider === 'gemini' || llmConfig.llmProvider === 'groq')) {
@@ -938,7 +998,14 @@ CRITICAL RULES:
     const newMastery = Math.min(5.0, masteryScore + masteryDelta);
     const projectedMastery = Math.max(0, newMastery);
     // Mastery requires BOTH consecutive correct answers AND a minimum mastery score
-    const isMastered = (consecutiveCorrect >= 2 && projectedMastery >= 2.0) || projectedMastery >= 3.5;
+    const priorKnowledge = assessment.priorKnowledge || false;
+    const isMastered = priorKnowledge ||
+        (consecutiveCorrect >= 2 && projectedMastery >= 2.0) ||
+        projectedMastery >= 3.5;
+
+    if (priorKnowledge) {
+        log.info('TUTOR', `⚡ Prior knowledge detected for "${topic}" — skipping subtopic`);
+    }
 
     // ── Award gamification credits on subtopic mastery (fire-and-forget) ──────
     if (isMastered && !state.masteryAwarded && state.userId) {

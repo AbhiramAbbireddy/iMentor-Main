@@ -17,6 +17,8 @@ const {
 } = require('../../../services/socraticTutorService');
 const tutorStateMachine = require('../../../services/tutorStateMachine');
 const knowledgeStateService = require('../../../services/knowledgeStateService');
+const socraticService = require('../../../services/socraticService');
+const masteryService = require('../../../services/masteryService');
 const axios = require('axios');
 const { performWebSearch } = require('../../../services/webSearchService');
 const socketService = require('../../../services/socketService');
@@ -24,6 +26,8 @@ const { triggerPeriodicAnalysis } = require('../../../middleware/contextualMemor
 const log = require('../../../utils/logger');
 const { streamEvent, TUTOR_MODE_TYPES, emitTutorKnowledgeEvents } = require('../helpers');
 const { computeTurnXp, awardTurnXpAsync, scheduleQualityBonusAsync } = require('../../../services/tutorXpService');
+const tutorEnhancementService = require('../../../services/tutorEnhancementService');
+const priorKnowledgeDetector = require('../../../services/priorKnowledgeDetector');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -35,6 +39,36 @@ const { computeTurnXp, awardTurnXpAsync, scheduleQualityBonusAsync } = require('
  */
 function buildMessagesEach(userMessageForDb, aiMessageForDb, isAutoGreeting) {
     return isAutoGreeting ? [aiMessageForDb] : [userMessageForDb, aiMessageForDb];
+}
+
+/**
+ * Select starting cognitive level based on prior knowledge and difficulty intent
+ * Adapts tutor difficulty before first question is generated
+ * @param {string} difficultyLevel - "beginner" | "intermediate" | "advanced"
+ * @param {boolean} hasPriorKnowledge - Whether student claims prior knowledge
+ * @returns {string} Cognitive level: "L1_CONCEPT" | "L2_APPLICATION" | "L3_CRITICAL" | "L4_EVALUATION"
+ */
+function selectStartingCognitiveLevel(difficultyLevel, hasPriorKnowledge) {
+    // Explicit advanced request → jump to L3 (critical analysis)
+    if (difficultyLevel === 'advanced') {
+        log.info('TUTOR', `🚀 Advanced request → Starting at L3_CRITICAL`);
+        return 'L3_CRITICAL';
+    }
+
+    // Explicit beginner request → start at L1 (safe default)
+    if (difficultyLevel === 'beginner') {
+        log.info('TUTOR', `📚 Beginner request → Starting at L1_CONCEPT`);
+        return 'L1_CONCEPT';
+    }
+
+    // Prior knowledge + intermediate → start at L2 (application level)
+    if (hasPriorKnowledge && difficultyLevel === 'intermediate') {
+        log.info('TUTOR', `⬆️  Prior knowledge detected → Starting at L2_APPLICATION`);
+        return 'L2_APPLICATION';
+    }
+
+    // Default: L1_CONCEPT (safe for new learners)
+    return 'L1_CONCEPT';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,6 +114,33 @@ async function handleGeneral(res, ctx) {
         }
 
         let currentSmState = smState;  // hoisted — updated after state machine writes
+
+        // Enforce retry threshold (maxRetries = 3)
+        try {
+            const retryCheck = tutorEnhancementService.checkRetryThreshold(sessionId, 3);
+            if (retryCheck && retryCheck.exceeded) {
+                const hintInfo = await tutorEnhancementService.generateProgressiveHint(
+                    tutorState?.teachingUnit || 'general',
+                    tutorState?.teachingUnit || 'concept',
+                    retryCheck.retryCount || 3,
+                    query.trim()
+                );
+                tutorEnhancementService.recordSessionMetric(sessionId, 'hint_given', { level: hintInfo.level });
+                const hintReply = {
+                    sender: 'bot', role: 'model',
+                    text: hintInfo.hint,
+                    parts: [{ text: hintInfo.hint }],
+                    timestamp: new Date(),
+                    source_pipeline: 'tutor-retry-hint',
+                    socraticState: SOCRATIC_STATES.HINT_GIVEN
+                };
+                streamEvent(res, { type: 'final_answer', content: hintReply });
+                res.end();
+                return true;
+            }
+        } catch (retryErr) {
+            log.warn('TUTOR', `Retry threshold check failed: ${retryErr.message}`);
+        }
 
         const tutorResult = await processTutorResponse(
             query.trim(),
@@ -135,6 +196,7 @@ async function handleGeneral(res, ctx) {
         const _genCogLvl = currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || tutorState?.cognitiveLevel || 'L1_CONCEPT';
         const _genHints  = tutorState?.hintsGiven || 0;
         const genXpResult = tutorResult ? computeTurnXp(_genCls, _genCogLvl, _genHints) : null;
+        const _masteryProgress = masteryService.calculateMasteryProgress(currentSmState, _genCls);
 
         if (!tutorResult) {
             const fallbackReply = {
@@ -220,7 +282,7 @@ async function handleGeneral(res, ctx) {
             socraticState: tutorResult.socraticState,
             thinking: `General Socratic mode. Move: ${tutorResult.pedagogicalMove}. ${tutorResult.reasoning || ''}`,
             criticalThinkingCues: [],
-            masteryProgress: tutorResult.masteryProgress || null,
+            masteryProgress: tutorResult.masteryProgress || _masteryProgress || null,
             steps: tutorResult.steps || [],
             confidenceScore: 85,
             xpDelta: genXpResult
@@ -261,6 +323,22 @@ async function handleGeneral(res, ctx) {
     sendStatus('Preparing Socratic session...');
 
     const rawQuery = query.trim();
+
+    // ── PHASE 1: Detect prior knowledge and difficulty intent ────────────────
+    const priorKnowledgeAnalysis = priorKnowledgeDetector.detectPriorKnowledge(rawQuery);
+    const { hasPriorKnowledge, masteredTopics, difficultyLevel, signals } = priorKnowledgeAnalysis;
+
+    if (priorKnowledgeAnalysis.hasPriorKnowledge) {
+        log.info('TUTOR', `Prior Knowledge Profile:`);
+        log.info('TUTOR', `  Topics: ${masteredTopics.join(', ') || 'N/A'}`);
+        log.info('TUTOR', `  Difficulty: ${difficultyLevel}`);
+        log.info('TUTOR', `  Confidence: ${Math.round(priorKnowledgeAnalysis.confidence * 100)}%`);
+    } else if (signals.advancedRequest || signals.beginnerRequest) {
+        log.info('TUTOR', `Difficulty Intent: ${difficultyLevel}`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     let teachingUnit = rawQuery
         .replace(/^(tell me about|explain|what is|what us|how does|teach me|i want to learn about|describe|what's|who is|let'?s?\s*(start|go|begin|learn)\s*(with)?|start\s*(with)?|begin\s*(with)?)\s*/i, '')
         .replace(/\?$/, '')
@@ -270,10 +348,7 @@ async function handleGeneral(res, ctx) {
         ? teachingUnit.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')
         : 'General AI Concepts';
 
-    let contextForIntro = '';
-    if (contextualMemory?.systemPrompt) {
-        contextForIntro = `[STUDENT PROFILE FOR PERSONALIZATION]:\n${contextualMemory.systemPrompt}`;
-    }
+    const contextForIntro = socraticService.buildPersonalizationContext(contextualMemory, query);
 
     let initialResponse = '';
     try {
@@ -295,6 +370,9 @@ async function handleGeneral(res, ctx) {
         initialResponse = `Let's explore **${teachingUnit}** together.\n\nTo begin, what do you already believe about this topic?`;
     }
 
+    // ── Select cognitive level based on prior knowledge ──────────────────────
+    const startingCognitiveLevel = selectStartingCognitiveLevel(difficultyLevel, hasPriorKnowledge);
+
     const generalState = {
         moduleTitle: teachingUnit,
         topic: teachingUnit,
@@ -306,12 +384,19 @@ async function handleGeneral(res, ctx) {
         startedAt: new Date().toISOString(),
         socraticState: SOCRATIC_STATES.INTRODUCTION,
         masteryScore: 0,
-        cognitiveLevel: 'L1_CONCEPT',
+        cognitiveLevel: startingCognitiveLevel,  // ← ADAPTED BY PRIOR KNOWLEDGE
         consecutiveWrong: 0,
         hintsGiven: 0,
         history: [],
         consecutiveCorrect: 0,
-        learningPath: await buildInitialLearningPath('General', { subtopicName: teachingUnit })
+        learningPath: await buildInitialLearningPath('General', { subtopicName: teachingUnit }),
+        // ── Store prior knowledge analysis for future reference ────
+        priorKnowledgeAnalysis: {
+            hasPriorKnowledge,
+            masteredTopics,
+            difficultyLevel,
+            signals
+        }
     };
     await setTutorSessionState(sessionId, generalState);
 
@@ -496,6 +581,7 @@ async function handleStructured(res, ctx) {
         const _strCogLvl = currentSmState?.cognitiveLevelName || currentSmState?.cognitiveLevel || tutorState?.cognitiveLevel || 'L1_CONCEPT';
         const _strHints  = tutorState?.hintsGiven || 0;
         const xpResult  = tutorResult ? computeTurnXp(_strCls, _strCogLvl, _strHints, !!tutorResult.isMastered) : null;
+        const _masteryProgress = masteryService.calculateMasteryProgress(currentSmState, _strCls);
 
         if (!tutorResult) {
             log.error('TUTOR', 'Failed to generate tutor response - LLM service unavailable');
@@ -602,8 +688,9 @@ async function handleStructured(res, ctx) {
                     }
 
                     let nextEnhancedContext = nextRagContext;
-                    if (contextualMemory?.systemPrompt) {
-                        nextEnhancedContext += `\n\n[STUDENT PROFILE]:\n${contextualMemory.systemPrompt}`;
+                    const nextMemoryContext = socraticService.buildPersonalizationContext(contextualMemory, query);
+                    if (nextMemoryContext) {
+                        nextEnhancedContext += `\n\n[STUDENT PROFILE]:\n${nextMemoryContext}`;
                     }
 
                     const nextIntro = await startSocraticSession(nextUnit, nextEnhancedContext, llmConfig, advanceResult.nextPosition);
@@ -758,7 +845,7 @@ async function handleStructured(res, ctx) {
             socraticState: tutorResult.socraticState,
             thinking: `Classification: ${tutorResult.classification}. Move: ${tutorResult.pedagogicalMove}. ${tutorResult.reasoning || ''}`,
             criticalThinkingCues: [],
-            masteryProgress: tutorResult.masteryProgress || null,
+            masteryProgress: tutorResult.masteryProgress || _masteryProgress || null,
             steps: tutorResult.steps || [],
             confidenceScore: 85,
             xpDelta: xpResult,
@@ -994,6 +1081,25 @@ async function handleStructured(res, ctx) {
 
     sendStatus(`Starting lesson on ${teachingUnit}…`);
 
+    // ── PHASE 1: Detect prior knowledge and difficulty intent ────────────────
+    const rawQuery = query.trim();
+    const priorKnowledgeAnalysis = priorKnowledgeDetector.detectPriorKnowledge(rawQuery);
+    const { hasPriorKnowledge: structHasPriorKnowledge, masteredTopics: structMasteredTopics, difficultyLevel: structDifficultyLevel, signals: structSignals } = priorKnowledgeAnalysis;
+
+    if (priorKnowledgeAnalysis.hasPriorKnowledge) {
+        log.info('TUTOR', `Prior Knowledge Profile (Structured):`);
+        log.info('TUTOR', `  Topics: ${structMasteredTopics.join(', ') || 'N/A'}`);
+        log.info('TUTOR', `  Difficulty: ${structDifficultyLevel}`);
+        log.info('TUTOR', `  Confidence: ${Math.round(priorKnowledgeAnalysis.confidence * 100)}%`);
+    } else if (structSignals.advancedRequest || structSignals.beginnerRequest) {
+        log.info('TUTOR', `Difficulty Intent (Structured): ${structDifficultyLevel}`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Select cognitive level based on prior knowledge ──────────────────────
+    const startingCognitiveLevel = selectStartingCognitiveLevel(structDifficultyLevel, structHasPriorKnowledge);
+
     const newTutorState = {
         moduleId: position?.moduleId || null,
         moduleName: position?.moduleName || null,
@@ -1015,12 +1121,19 @@ async function handleStructured(res, ctx) {
         startedAt: new Date().toISOString(),
         socraticState: SOCRATIC_STATES.INTRODUCTION,
         masteryScore: 0,
-        cognitiveLevel: 'L1_CONCEPT',
+        cognitiveLevel: startingCognitiveLevel,  // ← ADAPTED BY PRIOR KNOWLEDGE
         topic: position?.subtopicName || position?.topicName || teachingUnit,
         consecutiveWrong: 0,
         hintsGiven: 0,
         history: [],
-        learningPath: await buildInitialLearningPath(courseName, position)
+        learningPath: await buildInitialLearningPath(courseName, position),
+        // ── Store prior knowledge analysis for future reference ────
+        priorKnowledgeAnalysis: {
+            hasPriorKnowledge: structHasPriorKnowledge,
+            masteredTopics: structMasteredTopics,
+            difficultyLevel: structDifficultyLevel,
+            signals: structSignals
+        }
     };
 
     await setTutorSessionState(sessionId, newTutorState);
