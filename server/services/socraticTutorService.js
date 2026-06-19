@@ -76,6 +76,47 @@ const SUPPORT_LEVELS = {
     DIRECT: 'DIRECT'          // Direct reteaching
 };
 
+// ─── Learning Gap Analyzer ─────────────────────────────────────────────
+
+const DEFAULT_SKILL_TREE = [
+    "Arrays",
+    "Linked Lists",
+    "Stacks",
+    "Queues",
+    "Trees",
+    "Graphs",
+    "Dynamic Programming"
+];
+
+function generateLearningProfile(masteredTopics = []) {
+
+    const strengths = masteredTopics;
+
+    const gaps = DEFAULT_SKILL_TREE.filter(
+        topic => !masteredTopics.includes(topic)
+    );
+
+    const progress = Math.round(
+        (strengths.length / DEFAULT_SKILL_TREE.length) * 100
+    );
+
+    let learnerLevel = "Beginner";
+
+    if (progress >= 70) {
+        learnerLevel = "Advanced";
+    } else if (progress >= 40) {
+        learnerLevel = "Intermediate";
+    }
+
+    return {
+        strengths,
+        gaps,
+        progress,
+        learnerLevel,
+        nextTopics: gaps.slice(0, 3)
+    };
+}
+
 /**
  * Multi-provider LLM call with automatic fallback (ported from Team1-6).
  * Tries preferred provider first, then falls back through all available providers.
@@ -990,24 +1031,73 @@ CRITICAL RULES:
     const isMastered = priorKnowledge ||
         (consecutiveCorrect >= 2 && projectedMastery >= 2.0) ||
         projectedMastery >= 3.5;
+if (priorKnowledge) {
 
-    if (priorKnowledge) {
     log.info('TUTOR', `⚡ Prior knowledge — skipping "${topic}"`);
 
+    const masteredTopics = [
+        ...(state.masteredTopics || []),
+        topic
+    ];
+
+    const learningProfile =
+    generateLearningProfile(masteredTopics);
+
+log.info(
+    'TUTOR',
+    `📊 Learning Profile Generated`
+);
+
+log.info(
+    'TUTOR',
+    `Level=${learningProfile.learnerLevel} | Progress=${learningProfile.progress}%`
+);
+
+log.info(
+    'TUTOR',
+    `Strengths=${learningProfile.strengths.join(", ")}`
+);
+
+log.info(
+    'TUTOR',
+    `Next=${learningProfile.nextTopics.join(", ")}`
+);
+
+
+
     const nextTopic =
-        learningPath?.steps?.[currentStep + 1]?.title ||
+        learningPath?.steps?.[currentStep + 1] ||
         "the next advanced concept";
 
     const skipMsg = sanitizeGeneratedText(
-        `Great — you already know ${topic}.
+`Great — you already know ${topic}.
 
-Let's move ahead.
+📊 Learning Profile
+
+Level:
+${learningProfile.learnerLevel}
+
+Strengths:
+${learningProfile.strengths.join(", ")}
+
+Learning Gaps:
+${learningProfile.gaps.slice(0, 4).join(", ")}
+
+Recommended Learning Path:
+${learningProfile.nextTopics.join(" → ")}
+
+🎯 Suggested Next Goal:
+Master ${learningProfile.nextTopics[0] || "the next topic"}
+
+Progress:
+${learningProfile.progress}%
 
 What do you know about ${nextTopic}?`
     );
 
     await setTutorSessionState(sessionId, {
         ...state,
+        masteredTopics,
         lastQuestion: skipMsg,
         turnCount: turnCount + 1,
         masteryScore: 5.0,
@@ -1019,6 +1109,7 @@ What do you know about ${nextTopic}?`
         followUpQuestion: skipMsg,
         classification: 'CORRECT',
         pedagogicalMove: 'SKIP_SUBTOPIC',
+        learningProfile,
         isMastered: true,
         socraticState: 'MASTERY_ACHIEVED',
         position,
