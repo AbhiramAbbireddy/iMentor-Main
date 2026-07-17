@@ -492,9 +492,10 @@ const ollamaService = require('./ollamaService');
 const llmStreamingService = require('./llmStreamingService');
 const { redisClient } = require('../config/redisClient');
 const { classifyQuery } = require('./queryClassifierService');
-const { selectModel, calculateComplexityScore } = require('./smartModelRouterService');
+const { selectModel, calculateComplexityScore, tuneParameters } = require('./smartModelRouterService');
 const { resolveProviderByPreference, getProviderChain } = require('./providerPriorityService');
 const { getCachedRoutingDecision, cacheRoutingDecision } = require('./routingCacheService');
+const { truncateContextToWindow } = require('../utils/tokenOptimizer');
 
 // SGLang — lazy-imported so the server starts cleanly when SGLANG_ENABLED=false
 const SGLANG_ENABLED = process.env.SGLANG_ENABLED === 'true';
@@ -711,6 +712,7 @@ async function selectLLM(query, context) {
         const complexityScore = calculateComplexityScore({ query, tokenEstimate, reasoningMode });
 
         autoDecision = await selectModel({
+          query,
           complexityScore,
           reasoningMode,
           tokenEstimate,
@@ -946,7 +948,7 @@ async function selectLLM(query, context) {
 const LLMRouter = {
   async generate({ query, systemPrompt = null, chatHistory = [], userId = null, deepResearchContext = false, onToken = null }) {
     try {
-      const { chosenModel } = await selectLLM(query, { userId, deepResearchContext });
+      const { chosenModel, routingDecision } = await selectLLM(query, { userId, deepResearchContext });
 
       let apiKey = chosenModel.apiKey;
       if (!apiKey && chosenModel.provider === 'gemini') {
@@ -956,21 +958,35 @@ const LLMRouter = {
         apiKey = process.env.GROQ_API_KEY;
       }
 
+      const tunedParams = routingDecision?.tunedParameters || tuneParameters({
+        query,
+        reasoningMode: deepResearchContext ? 'deep_research' : 'standard'
+      });
+      const temperature = tunedParams.temperature ?? (deepResearchContext ? 0.2 : 0.7);
+      const maxOutputTokens = tunedParams.maxOutputTokens ?? (deepResearchContext ? 8192 : 4096);
+
       const llmOptions = {
         apiKey,
         model: chosenModel.modelId,
-        temperature: deepResearchContext ? 0.2 : 0.7,
-        maxOutputTokens: deepResearchContext ? 8192 : 4096,
+        temperature,
+        maxOutputTokens,
         ollamaUrl: chosenModel.workingUrl 
       };
 
+      let maxLimit = 24000;
+      if (chosenModel.provider === 'gemini') maxLimit = 400000;
+      else if (chosenModel.provider === 'groq' && chosenModel.modelId && chosenModel.modelId.includes('70b')) maxLimit = 120000;
+
       if (onToken) {
         // STREAMING PATH — all providers now supported
-        const streamMessages = [...chatHistory, { role: 'user', content: query }];
+        const rawStreamMessages = [...chatHistory, { role: 'user', content: query }];
+        const streamMessages = truncateContextToWindow(rawStreamMessages, maxLimit);
+        const truncatedUserQuery = streamMessages[streamMessages.length - 1]?.content || query;
+        const truncatedChatHistory = streamMessages.slice(0, -1);
 
         if (chosenModel.provider === 'sglang') {
           // Dynamic token calculation for SGLang to prevent context overflow
-          const allText = chatHistory.map(m => m.content).join(' ') + query + (systemPrompt || '');
+          const allText = truncatedChatHistory.map(m => m.content).join(' ') + truncatedUserQuery + (systemPrompt || '');
           const estimatedInputTokens = Math.ceil(allText.length / 4);
           const modelMaxContext = sglangCaps.getModelMaxContext(); // live from /v1/models
           const safetyBuffer = 200;
@@ -980,7 +996,7 @@ const LLMRouter = {
           log.info('AI', `[SGLang Deep Research] Token budget: input≈${estimatedInputTokens} + completion=${adjustedMaxTokens} ≈ ${estimatedInputTokens + adjustedMaxTokens} / ${modelMaxContext}`);
           
           return await chosenModel._sglangService.streamChat(
-            chatHistory, query, systemPrompt,
+            truncatedChatHistory, truncatedUserQuery, systemPrompt,
             { model: chosenModel.modelId, ollamaUrl: chosenModel.workingUrl, maxTokens: adjustedMaxTokens },
             onToken
           );
@@ -988,8 +1004,8 @@ const LLMRouter = {
 
         if (chosenModel.provider === 'ollama') {
           return await ollamaService.streamChat(
-            chatHistory,
-            query,
+            truncatedChatHistory,
+            truncatedUserQuery,
             systemPrompt,
             llmOptions,
             (token) => {
@@ -1011,11 +1027,16 @@ const LLMRouter = {
         });
       }
 
+      const rawMessages = [...chatHistory, { role: 'user', content: query }];
+      const optimizedMessages = truncateContextToWindow(rawMessages, maxLimit);
+      const finalUserQuery = optimizedMessages[optimizedMessages.length - 1]?.content || query;
+      const finalChatHistory = optimizedMessages.slice(0, -1);
+
       const llmService = chosenModel.provider === 'sglang'
           ? chosenModel._sglangService
           : (chosenModel.provider === 'ollama' ? ollamaService : geminiService);
 
-      return await llmService.generateContentWithHistory(chatHistory, query, systemPrompt, llmOptions);
+      return await llmService.generateContentWithHistory(finalChatHistory, finalUserQuery, systemPrompt, llmOptions);
     } catch (error) {
       log.error('AI', `Generation failed: ${error.message}`);
       throw error;
