@@ -3,7 +3,7 @@ import Animate from '../core/Animate.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Lock, Star, CheckCircle2, Play, Trophy, Zap,
-    ArrowLeft, Target, Crown, Sparkles, Flame, Gift, Check, Loader2
+    ArrowLeft, ArrowRight, Target, Crown, Sparkles, Flame, Gift, Check, X, Loader2
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -500,7 +500,8 @@ const SkillTreeGameMap = () => {
     const renderStars = (count, size = 'sm') => {
         const sizeClass = size === 'lg' ? 'w-6 h-6' : 'w-4 h-4';
         return (
-            <div className="flex gap-0.5">
+            <div className="f
+            lex gap-0.5">
                 {[1, 2, 3].map(star => (
                     <Star
                         key={star}
@@ -764,7 +765,6 @@ const SkillTreeGameMap = () => {
                             <h2 className="text-xl font-semibold text-white mb-6 leading-relaxed">
                                 {currentQuestion?.question || ''}
                             </h2>
-
                             <div className="space-y-3">
                                 {(currentQuestion?.options || []).map((option, idx) => {
                                     const isSelected = selectedAnswer === idx;

@@ -5,10 +5,11 @@
  * Guarantees a response regardless of provider availability:
  *   1. Respects user preference (local-first or cloud-first)
  *   2. If preferred provider fails → tries full chain automatically
- *   3. Local-first:  ollama → groq → gemini → anthropic → mistral
- *   4. Cloud-first:  user-preferred-cloud → groq → gemini → ollama → anthropic → mistral
+ *   3. Local-first:  sglang → groq → gemini
+ *   4. Cloud-first:  gemini → groq → sglang
  *   5. Works for chat, Socratic, tools, research — every call site
  *   6. Supports thinking models (qwen3, gemma3, deepseek-r1) with native think flag
+ *   7. [Optimization] Per-provider concurrency control via Bottleneck
  *
  * Usage:
  *   const { callWithFallback, streamWithFallback } = require('./llmFallbackService');
@@ -17,6 +18,7 @@
 
 const log = require('../utils/logger');
 const { checkOllamaHealth } = require('./ollamaHealthService');
+const Bottleneck = require('bottleneck'); // [Optimization] Per-provider concurrency control
 
 // Lazy-load provider services to avoid circular deps
 let _gemini, _ollama, _streaming, _sglang, _groq, _openai;
@@ -26,6 +28,47 @@ function sglangService()    { return _sglang    || (_sglang    = require('./sgla
 function groqService()      { return _groq      || (_groq      = require('./groqService'));      }
 function openaiService()    { return _openai    || (_openai    = require('./openaiService'));    }
 function streamingService() { return _streaming || (_streaming = require('./llmStreamingService')); }
+
+// ─── PER-PROVIDER CONCURRENCY LIMITERS ─────────────────────────────────────
+// [Optimization] Prevents concurrent users from hammering the same provider.
+// Each provider gets its own limiter. When one provider's queue is full,
+// the request overflows to the next provider in the fallback chain.
+const CONCURRENCY_SGLANG = parseInt(process.env.LLM_CONCURRENCY_SGLANG, 10) || 3;
+const CONCURRENCY_GEMINI = parseInt(process.env.LLM_CONCURRENCY_GEMINI, 10) || 3;
+const CONCURRENCY_GROQ   = parseInt(process.env.LLM_CONCURRENCY_GROQ,   10) || 3;
+const HIGH_WATER_MARK    = parseInt(process.env.LLM_QUEUE_MAX_DEPTH,     10) || 20;
+const QUEUE_WARN_THRESHOLD = 10;
+
+const providerLimiters = {
+    sglang: new Bottleneck({
+        maxConcurrent: CONCURRENCY_SGLANG,
+        highWater: HIGH_WATER_MARK,
+        strategy: Bottleneck.strategy.OVERFLOW,
+    }),
+    gemini: new Bottleneck({
+        maxConcurrent: CONCURRENCY_GEMINI,
+        highWater: HIGH_WATER_MARK,
+        strategy: Bottleneck.strategy.OVERFLOW,
+    }),
+    groq: new Bottleneck({
+        maxConcurrent: CONCURRENCY_GROQ,
+        highWater: HIGH_WATER_MARK,
+        strategy: Bottleneck.strategy.OVERFLOW,
+    }),
+};
+
+// Queue depth monitoring — warn when approaching capacity
+for (const [name, limiter] of Object.entries(providerLimiters)) {
+    limiter.on('queued', () => {
+        const queued = limiter.queued();
+        if (queued >= QUEUE_WARN_THRESHOLD) {
+            log.warn('AI', `[Bottleneck] ${name} queue depth: ${queued}/${HIGH_WATER_MARK} — approaching capacity`);
+        }
+    });
+    limiter.on('dropped', () => {
+        log.warn('AI', `[Bottleneck] ${name} queue FULL (${HIGH_WATER_MARK}) — request overflowing to next provider`);
+    });
+}
 
 // ─── THINKING MODEL DETECTION ──────────────────────────────────────────────
 const THINKING_MODEL_PATTERNS = /qwen3|qwq|deepseek.*r1|gemma3|gemma-3/i;
@@ -295,6 +338,58 @@ async function callWithFallback({
                         } else {
                             onToken(token);
                         }
+
+                    );
+                } else if (onToken && UNIFIED_STREAM_PROVIDERS.has(provider)) {
+                    // Gemini/Groq via unified streaming service
+                    const messages = [
+                        ...chatHistory.map(m => ({
+                            role: m.role === 'model' ? 'assistant' : m.role,
+                            content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                        })),
+                        { role: 'user', content: userQuery }
+                    ];
+                    return await streamingService().streamCompletion({
+                        messages, provider, model, apiKey, systemPrompt, onToken,
+                        options: { ...callOptions, handleThinkingTags: thinkEnabled }
+                    });
+                } else if (onToken && provider === 'sglang') {
+                    // SGLang via unified streaming service
+                    const messages = [
+                        ...chatHistory.map(m => ({
+                            role: m.role === 'model' ? 'assistant' : m.role,
+                            content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                        })),
+                        { role: 'user', content: userQuery }
+                    ];
+                    return await streamingService().streamCompletion({
+                        messages, provider: 'sglang', model, apiKey, systemPrompt, onToken,
+                        options: callOptions
+                    });
+                } else if (provider === 'sglang') {
+                    // SGLang direct REST call
+                    const axios = require('axios');
+                    const messages = [];
+                    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+                    messages.push(...chatHistory.map(m => ({
+                        role: m.role === 'model' ? 'assistant' : m.role,
+                        content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                    })));
+                    messages.push({ role: 'user', content: userQuery });
+                    const sglangUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
+                    const resp = await axios.post(`${sglangUrl}/chat/completions`, {
+                        model,
+                        messages,
+                        max_tokens: callOptions.maxOutputTokens ?? 4096,
+                        temperature: callOptions.temperature ?? 0.7,
+                        stream: false,
+                    }, { timeout: 30000 });
+                    return resp.data?.choices?.[0]?.message?.content || '';
+                } else {
+                    // Non-streaming path for gemini/groq
+                    const svc = getServiceForProvider(provider);
+                    if (!svc) {
+                        throw new Error(`No service implementation for provider: ${provider}`);
                     }
                 );
             } else if (onToken && UNIFIED_STREAM_PROVIDERS.has(provider)) {
@@ -360,10 +455,17 @@ async function callWithFallback({
             };
         } catch (err) {
             const msg = err.message || String(err);
-            errors.push({ provider, model, error: msg });
-            log.warn('AI', `[Fallback] ✗ ${provider} failed: ${msg.slice(0, 120)}`);
-            if (provider === 'ollama') invalidateOllamaHealth();
-            if (provider === 'sglang') invalidateSglangHealth();
+            // [Optimization] Bottleneck OVERFLOW produces a specific error message.
+            // Treat it as "provider busy" — log and continue to the next provider.
+            if (msg === 'This job has been dropped by Bottleneck') {
+                errors.push({ provider, model, error: `Queue full (${HIGH_WATER_MARK} pending) — overflowed to next provider` });
+                log.warn('AI', `[Fallback] ⏳ ${provider} queue full — overflowing to next provider`);
+            } else {
+                errors.push({ provider, model, error: msg });
+                log.warn('AI', `[Fallback] ✗ ${provider} failed: ${msg.slice(0, 120)}`);
+                if (provider === 'ollama') invalidateOllamaHealth();
+                if (provider === 'sglang') invalidateSglangHealth();
+            }
         }
     }
 
@@ -408,16 +510,22 @@ function resolveModelForProvider(provider, options = {}) {
         return process.env.OLLAMA_DEFAULT_MODEL || 'qwen3.5:9b';
     }
     return optModel || 'gemini-2.0-flash';
+    switch (provider) {
+        case 'ollama':  return options.model || process.env.OLLAMA_DEFAULT_MODEL || 'qwen3.5:9b';
+        case 'gemini':  return options.geminiModel || options.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        case 'groq':    return options.model || process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+        default:        return options.model || 'gemini-2.0-flash';
+    }
 }
 
 // ─── FAST MODEL SELECTOR (for overhead calls) ──────────────────────────────
 /**
  * Returns the fastest available provider+model for low-latency overhead calls.
- * Priority: SGLang (primary, local GPU) → Groq → Gemini.
+ * Priority: SGLang (local GPU) → Groq (fast cloud) → Groq → Gemini.
  * Ollama is NEVER used for LLM generation tasks — embeddings only.
  */
 async function getFastModel(userApiKeys = {}, ollamaUrlHint = null) {
-    // 1) SGLang — primary for all LLM generation calls if enabled and responsive
+    // 1) SGLang — primary for all LLM generation calls if enabled and responsive when deployed
     if (process.env.SGLANG_ENABLED === 'true') {
         const sglangUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
         try {
@@ -434,7 +542,16 @@ async function getFastModel(userApiKeys = {}, ollamaUrlHint = null) {
         }
     }
 
-    // 2) Groq — fast cloud provider
+    // 2) Groq — fast cloud fallback, no admin validation needed
+    if (hasApiKey('groq', userApiKeys)) {
+        return {
+            provider: 'groq',
+            model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+            apiKey: getApiKey('groq', userApiKeys),
+        };
+    }
+
+    // 3) Groq — fast cloud provider
     if (hasApiKey('groq', userApiKeys)) {
         return {
             provider: 'groq',
@@ -489,6 +606,25 @@ async function callFast({ prompt, systemPrompt = null, userApiKeys = {}, ollamaU
         }, { timeout: 30000 });
         const text = resp.data?.choices?.[0]?.message?.content?.trim() || '';
         if (!text) throw new Error('SGLang fast call returned empty response');
+        return text;
+    }
+
+    // Groq — use SDK directly for non-streaming fast calls
+    if (fast.provider === 'groq') {
+        const Groq = require('groq-sdk');
+        const groq = new Groq({ apiKey: fast.apiKey });
+        const messages = [];
+        if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+        messages.push({ role: 'user', content: prompt });
+        const resp = await groq.chat.completions.create({
+            model: fast.model,
+            messages,
+            max_tokens: options.maxOutputTokens ?? 2048,
+            temperature: options.temperature ?? 0.3,
+            stream: false,
+        });
+        const text = resp.choices?.[0]?.message?.content?.trim() || '';
+        if (!text) throw new Error('Groq fast call returned empty response');
         return text;
     }
 
