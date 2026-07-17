@@ -492,7 +492,7 @@ const ollamaService = require('./ollamaService');
 const llmStreamingService = require('./llmStreamingService');
 const { redisClient } = require('../config/redisClient');
 const { classifyQuery } = require('./queryClassifierService');
-const { selectModel, calculateComplexityScore } = require('./smartModelRouterService');
+const { selectModel, calculateComplexityScore, tuneParameters } = require('./smartModelRouterService');
 const { resolveProviderByPreference, getProviderChain } = require('./providerPriorityService');
 const { getCachedRoutingDecision, cacheRoutingDecision } = require('./routingCacheService');
 
@@ -711,6 +711,7 @@ async function selectLLM(query, context) {
         const complexityScore = calculateComplexityScore({ query, tokenEstimate, reasoningMode });
 
         autoDecision = await selectModel({
+          query,
           complexityScore,
           reasoningMode,
           tokenEstimate,
@@ -946,7 +947,7 @@ async function selectLLM(query, context) {
 const LLMRouter = {
   async generate({ query, systemPrompt = null, chatHistory = [], userId = null, deepResearchContext = false, onToken = null }) {
     try {
-      const { chosenModel } = await selectLLM(query, { userId, deepResearchContext });
+      const { chosenModel, routingDecision } = await selectLLM(query, { userId, deepResearchContext });
 
       let apiKey = chosenModel.apiKey;
       if (!apiKey && chosenModel.provider === 'gemini') {
@@ -956,11 +957,18 @@ const LLMRouter = {
         apiKey = process.env.GROQ_API_KEY;
       }
 
+      const tunedParams = routingDecision?.tunedParameters || tuneParameters({
+        query,
+        reasoningMode: deepResearchContext ? 'deep_research' : 'standard'
+      });
+      const temperature = tunedParams.temperature ?? (deepResearchContext ? 0.2 : 0.7);
+      const maxOutputTokens = tunedParams.maxOutputTokens ?? (deepResearchContext ? 8192 : 4096);
+
       const llmOptions = {
         apiKey,
         model: chosenModel.modelId,
-        temperature: deepResearchContext ? 0.2 : 0.7,
-        maxOutputTokens: deepResearchContext ? 8192 : 4096,
+        temperature,
+        maxOutputTokens,
         ollamaUrl: chosenModel.workingUrl 
       };
 
