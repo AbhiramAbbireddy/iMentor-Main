@@ -21,11 +21,12 @@ const { checkOllamaHealth } = require('./ollamaHealthService');
 const Bottleneck = require('bottleneck'); // [Optimization] Per-provider concurrency control
 
 // Lazy-load provider services to avoid circular deps
-let _gemini, _ollama, _streaming, _sglang, _groq; // [Team1] added sglang + groq
+let _gemini, _ollama, _streaming, _sglang, _groq, _openai;
 function geminiService()    { return _gemini    || (_gemini    = require('./geminiService'));    }
 function ollamaService()    { return _ollama    || (_ollama    = require('./ollamaService'));    }
-function sglangService()    { return _sglang    || (_sglang    = require('./sglangService'));    } // [Team1]
-function groqService()      { return _groq      || (_groq      = require('./groqService'));      } // [Team1]
+function sglangService()    { return _sglang    || (_sglang    = require('./sglangService'));    }
+function groqService()      { return _groq      || (_groq      = require('./groqService'));      }
+function openaiService()    { return _openai    || (_openai    = require('./openaiService'));    }
 function streamingService() { return _streaming || (_streaming = require('./llmStreamingService')); }
 
 // ─── PER-PROVIDER CONCURRENCY LIMITERS ─────────────────────────────────────
@@ -104,6 +105,7 @@ async function isOllamaUp(userOllamaUrl) {
     const candidates = [
         userOllamaUrl,
         process.env.OLLAMA_API_BASE_URL,
+        process.env.OLLAMA_URL,
         `http://localhost:${process.env.OLLAMA_PORT || 11434}`
     ].filter(Boolean);
 
@@ -146,14 +148,26 @@ async function isSglangUp() {
         return _sglangHealthy;
     }
     try {
-        const healthy = await sglangService().checkHealth('chat');
-        _sglangHealthy = healthy;
+        // Quick HTTP health check with short timeout instead of relying on SDK client
+        const sglangUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
+        const baseUrl = sglangUrl.replace(/\/v1\/?$/, '').replace(/\/chat\/completions\/?$/, '');
+        const axios = require('axios');
+        await axios.get(`${baseUrl}/health`, { timeout: 3000 });
+        _sglangHealthy = true;
         _sglangHealthTs = now;
-        return healthy;
+        return true;
     } catch (e) {
-        _sglangHealthy = false;
-        _sglangHealthTs = now;
-        return false;
+        // Fallback to SDK health check if quick HTTP check fails
+        try {
+            const healthy = await sglangService().checkHealth('chat');
+            _sglangHealthy = healthy;
+            _sglangHealthTs = now;
+            return healthy;
+        } catch (e2) {
+            _sglangHealthy = false;
+            _sglangHealthTs = now;
+            return false;
+        }
     }
 }
 
@@ -163,12 +177,25 @@ function invalidateSglangHealth() {
 }
 
 // ─── API KEY AVAILABILITY ──────────────────────────────────────────────────
+const PLACEHOLDER_KEYS = new Set([
+    'your_gemini_api_key',
+    'your_groq_api_key_here',
+    'your_api_key_here',
+    'placeholder',
+    '',
+]);
+
+function isValidKey(key) {
+    return Boolean(key) && !PLACEHOLDER_KEYS.has(key.trim().toLowerCase());
+}
+
 function hasApiKey(provider, userKeys = {}) {
     switch (provider) {
-        case 'gemini': return Boolean(userKeys.gemini || process.env.GEMINI_API_KEY);
-        case 'groq':   return Boolean(userKeys.groq || process.env.GROQ_API_KEY);
-        case 'ollama': return true; // no key needed
-        case 'sglang': return true; // no key needed
+        case 'gemini': return isValidKey(userKeys.gemini || process.env.GEMINI_API_KEY);
+        case 'groq':   return isValidKey(userKeys.groq || process.env.GROQ_API_KEY);
+        case 'openai': return isValidKey(userKeys.openai || process.env.OPENAI_API_KEY);
+        case 'ollama': return true;
+        case 'sglang': return true;
         default:       return false;
     }
 }
@@ -177,21 +204,29 @@ function getApiKey(provider, userKeys = {}) {
     switch (provider) {
         case 'gemini': return userKeys.gemini || process.env.GEMINI_API_KEY;
         case 'groq':   return userKeys.groq || process.env.GROQ_API_KEY;
+        case 'openai': return userKeys.openai || process.env.OPENAI_API_KEY;
         default:       return null;
     }
 }
 
+// ─── PER-PROVIDER TIMEOUTS (ms) ────────────────────────────────────────────
+const PROVIDER_TIMEOUTS = {
+    sglang: 5_000,
+    groq:   15_000,
+    gemini: 15_000,
+    openai: 15_000,
+    ollama: 300_000,
+};
+
 // ─── FALLBACK CHAIN BUILDER ────────────────────────────────────────────────
-// SGLang is handled via local / API calls. Groq and Gemini are fallback targets.
-// Ollama is REMOVED from LLM chains — it is for embeddings only (now replaced by FastEmbed).
-// SGLang is handled via callFast/getFastModel. Cloud fallback = Groq → Gemini.
-const LOCAL_FIRST_CHAIN  = ['sglang', 'groq', 'gemini'];
-const CLOUD_FIRST_CHAIN  = ['gemini', 'groq', 'sglang'];
+// SGLang (local GPU) → Groq → Gemini → OpenAI → Ollama (last resort)
+const LOCAL_FIRST_CHAIN  = ['sglang', 'groq', 'gemini', 'openai', 'ollama'];
+const CLOUD_FIRST_CHAIN  = ['groq', 'gemini', 'openai', 'sglang', 'ollama'];
 
 /**
  * Build an ordered provider chain with user preference first.
  */
-function buildFallbackChain(preferredProvider = 'sglang', preferLocalFirst = true) {
+function buildFallbackChain(preferredProvider = 'groq', preferLocalFirst = true) {
     const base = preferLocalFirst ? [...LOCAL_FIRST_CHAIN] : [...CLOUD_FIRST_CHAIN];
     const norm = (preferredProvider || 'sglang').toLowerCase().trim();
     // Put preferred first, then the rest in default order
@@ -204,6 +239,7 @@ function getServiceForProvider(provider) {
     switch (provider) {
         case 'gemini': return geminiService();
         case 'groq':   return groqService();
+        case 'openai': return openaiService();
         case 'ollama': return ollamaService();
         case 'sglang': return sglangService();
         default:       return null;
@@ -211,7 +247,7 @@ function getServiceForProvider(provider) {
 }
 
 // Providers that support streaming in llmStreamingService
-const UNIFIED_STREAM_PROVIDERS = new Set(['gemini', 'groq']);
+const UNIFIED_STREAM_PROVIDERS = new Set(['gemini', 'groq', 'openai']);
 
 // ─── CORE: CALL WITH FALLBACK ──────────────────────────────────────────────
 /**
@@ -234,18 +270,20 @@ async function callWithFallback({
     userQuery,
     systemPrompt = null,
     options = {},
-    preferredProvider = 'ollama',
-    preferLocalFirst = true,
+    preferredProvider = 'groq',
+    preferLocalFirst = false,
     userApiKeys = {},
     ollamaUrl = null,
     onToken = null,
 }) {
     const chain = buildFallbackChain(preferredProvider, preferLocalFirst);
     const errors = [];
+    let attemptedAny = false;
 
     for (const provider of chain) {
         // Skip providers without API keys (except ollama)
         if (provider !== 'ollama' && !hasApiKey(provider, userApiKeys)) {
+            log.info('AI', `[Fallback] Skipping ${provider} — API key missing or is placeholder`);
             continue;
         }
 
@@ -271,6 +309,7 @@ async function callWithFallback({
         const apiKey = getApiKey(provider, userApiKeys);
         const model = resolveModelForProvider(provider, options);
         const thinkEnabled = isThinkingModel(model);
+        const providerTimeout = PROVIDER_TIMEOUTS[provider] || 30_000;
 
         const callOptions = {
             ...options,
@@ -279,26 +318,25 @@ async function callWithFallback({
             ollamaUrl,
             temperature: options.temperature ?? 0.7,
             maxOutputTokens: options.maxOutputTokens ?? 4096,
+            timeout: Math.max(providerTimeout, options.timeout || 0),
             ...(provider === 'gemini' && { geminiModel: model }),
             ...(thinkEnabled && { think: true }),
         };
 
+        attemptedAny = true;
+        log.info('AI', `[Fallback] Attempting ${provider}/${model} (timeout: ${providerTimeout}ms)`);
+
         try {
-            // [Optimization] Wrap the actual LLM call in the provider's concurrency limiter.
-            // If the provider's queue is full (OVERFLOW), Bottleneck rejects immediately
-            // and the catch block below falls through to the next provider.
-            const limiter = providerLimiters[provider];
-            const executeLlmCall = async () => {
-                if (onToken && provider === 'ollama') {
-                    // Ollama has native streaming via streamChat
-                    return await ollamaService().streamChat(
-                        chatHistory, userQuery, systemPrompt, callOptions,
-                        (token) => {
-                            if (typeof token === 'string') {
-                                onToken({ type: 'token', content: token });
-                            } else {
-                                onToken(token);
-                            }
+            let result;
+
+            if (onToken && provider === 'ollama') {
+                result = await ollamaService().streamChat(
+                    chatHistory, userQuery, systemPrompt, callOptions,
+                    (token) => {
+                        if (typeof token === 'string') {
+                            onToken({ type: 'token', content: token });
+                        } else {
+                            onToken(token);
                         }
 
                     );
@@ -353,19 +391,53 @@ async function callWithFallback({
                     if (!svc) {
                         throw new Error(`No service implementation for provider: ${provider}`);
                     }
-                    return await svc.generateContentWithHistory(
-                        chatHistory,
-                        userQuery,
-                        systemPrompt,
-                        callOptions
-                    );
-                }
-            };
-
-            // Schedule through limiter if one exists for this provider, otherwise call directly
-            const result = limiter
-                ? await limiter.schedule(executeLlmCall)
-                : await executeLlmCall();
+                );
+            } else if (onToken && UNIFIED_STREAM_PROVIDERS.has(provider)) {
+                const messages = [
+                    ...chatHistory.map(m => ({
+                        role: m.role === 'model' ? 'assistant' : m.role,
+                        content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                    })),
+                    { role: 'user', content: userQuery }
+                ];
+                result = await streamingService().streamCompletion({
+                    messages, provider, model, apiKey, systemPrompt, onToken,
+                    options: { ...callOptions, handleThinkingTags: thinkEnabled }
+                });
+            } else if (onToken && provider === 'sglang') {
+                const messages = [
+                    ...chatHistory.map(m => ({
+                        role: m.role === 'model' ? 'assistant' : m.role,
+                        content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                    })),
+                    { role: 'user', content: userQuery }
+                ];
+                result = await streamingService().streamCompletion({
+                    messages, provider: 'sglang', model, apiKey, systemPrompt, onToken,
+                    options: callOptions
+                });
+            } else if (provider === 'sglang') {
+                const axios = require('axios');
+                const messages = [];
+                if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+                messages.push(...chatHistory.map(m => ({
+                    role: m.role === 'model' ? 'assistant' : m.role,
+                    content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                })));
+                messages.push({ role: 'user', content: userQuery });
+                const sglangUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
+                const resp = await axios.post(`${sglangUrl}/chat/completions`, {
+                    model,
+                    messages,
+                    max_tokens: callOptions.maxOutputTokens ?? 4096,
+                    temperature: callOptions.temperature ?? 0.7,
+                    stream: false,
+                }, { timeout: providerTimeout });
+                result = resp.data?.choices?.[0]?.message?.content || '';
+            } else {
+                const svc = getServiceForProvider(provider);
+                result = await svc.generateContentWithHistory(chatHistory, userQuery, systemPrompt, callOptions);
+            }
 
             const text = typeof result === 'string' ? result : String(result || '');
             const { thinking, content } = separateThinking(text);
@@ -427,6 +499,10 @@ function resolveModelForProvider(provider, options = {}) {
     if (provider === 'sglang') {
         if (optModel && optModel.includes('/')) return optModel;
         return process.env.SGLANG_CHAT_MODEL || 'Qwen/Qwen2.5-7B-Instruct-AWQ';
+    }
+    if (provider === 'openai') {
+        if (optModel && optModel.toLowerCase().startsWith('gpt')) return optModel;
+        return process.env.OPENAI_MODEL || 'gpt-4o';
     }
     if (provider === 'ollama') {
         const isNotOllama = optModel && (optModel.toLowerCase().startsWith('gemini') || optModel.includes('/'));
@@ -490,6 +566,15 @@ async function getFastModel(userApiKeys = {}, ollamaUrlHint = null) {
             provider: 'gemini',
             model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
             apiKey: getApiKey('gemini', userApiKeys),
+        };
+    }
+
+    // 4) OpenAI — cloud fallback
+    if (hasApiKey('openai', userApiKeys)) {
+        return {
+            provider: 'openai',
+            model: process.env.OPENAI_MODEL || 'gpt-4o',
+            apiKey: getApiKey('openai', userApiKeys),
         };
     }
 
@@ -559,8 +644,174 @@ async function callFast({ prompt, systemPrompt = null, userApiKeys = {}, ollamaU
     return svc.generateContentWithHistory([], prompt, systemPrompt, callOpts);
 }
 
+// ─── PARALLEL PROVIDER DISPATCH ────────────────────────────────────────
+/**
+ * Call multiple LLM providers in parallel; first valid response wins.
+ * Uses AbortController to cancel remaining in-flight requests.
+ *
+ * @param {Object} params - Same as callWithFallback, plus:
+ * @param {string[]} params.parallelProviders - Pre-filtered healthy providers to try in parallel
+ * @param {number} params.staggerMs - Stagger between starts (default 200)
+ * @returns {Promise<{text: string, provider: string, model: string}>}
+ */
+async function parallelCallWithFallback({
+    chatHistory = [],
+    userQuery,
+    systemPrompt = null,
+    options = {},
+    parallelProviders = [],
+    staggerMs = 200,
+    preferredProvider = 'groq',
+    userApiKeys = {},
+    ollamaUrl = null,
+}) {
+    if (!parallelProviders.length) {
+        return callWithFallback({ chatHistory, userQuery, systemPrompt, options, preferredProvider, userApiKeys, ollamaUrl });
+    }
+
+    const logCtx = `parallel(${parallelProviders.join(',')})`;
+    log.info('AI', `[Parallel] Starting ${logCtx}`);
+
+    const aborted = new Set();
+    const errors = [];
+
+    const attemptProvider = (provider, index) => {
+        return new Promise(async (resolve) => {
+            const controller = new AbortController();
+            const signal = controller.signal;
+            const delay = index * staggerMs;
+            if (delay > 0) {
+                await new Promise(r => setTimeout(r, delay));
+            }
+
+            if (aborted.has(provider) || signal.aborted) {
+                resolve(null);
+                return;
+            }
+
+            if (provider !== 'ollama' && !hasApiKey(provider, userApiKeys)) {
+                log.info('AI', `[Parallel] Skipping ${provider} — missing key`);
+                resolve(null);
+                return;
+            }
+
+            if (provider === 'sglang') {
+                const healthy = await isSglangUp();
+                if (!healthy) {
+                    log.info('AI', `[Parallel] Skipping sglang — not reachable`);
+                    resolve(null);
+                    return;
+                }
+            }
+            if (provider === 'ollama') {
+                const { healthy, url } = await isOllamaUp(ollamaUrl);
+                if (!healthy) {
+                    log.info('AI', `[Parallel] Skipping ollama — not reachable`);
+                    resolve(null);
+                    return;
+                }
+                ollamaUrl = url;
+            }
+
+            const apiKey = getApiKey(provider, userApiKeys);
+            const model = resolveModelForProvider(provider, options);
+            const thinkEnabled = isThinkingModel(model);
+            const providerTimeout = PROVIDER_TIMEOUTS[provider] || 30_000;
+
+            const callOptions = {
+                ...options,
+                apiKey,
+                model,
+                ollamaUrl,
+                temperature: options.temperature ?? 0.7,
+                maxOutputTokens: options.maxOutputTokens ?? 4096,
+                timeout: Math.max(providerTimeout, options.timeout || 0),
+                signal,
+                ...(provider === 'gemini' && { geminiModel: model }),
+                ...(thinkEnabled && { think: true }),
+            };
+
+            const providerStartTime = Date.now();
+            log.info('AI', `[Parallel] Attempting ${provider}/${model} (timeout: ${providerTimeout}ms)`);
+
+            try {
+                let result;
+                if (provider === 'sglang') {
+                    const ax = require('axios');
+                    const messages = [];
+                    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+                    messages.push(...chatHistory.map(m => ({
+                        role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
+                        content: Array.isArray(m.parts) ? m.parts[0].text : (m.text || m.content || '')
+                    })));
+                    messages.push({ role: 'user', content: userQuery });
+                    const sglangUrl = process.env.SGLANG_CHAT_URL || 'http://localhost:8000/v1';
+                    const resp = await ax.post(`${sglangUrl}/chat/completions`, {
+                        model, messages,
+                        max_tokens: callOptions.maxOutputTokens ?? 4096,
+                        temperature: callOptions.temperature ?? 0.7,
+                        stream: false,
+                    }, { timeout: providerTimeout, signal });
+                    result = resp.data?.choices?.[0]?.message?.content || '';
+                } else {
+                    const svc = getServiceForProvider(provider);
+                    result = await svc.generateContentWithHistory(chatHistory, userQuery, systemPrompt, callOptions);
+                }
+
+                const text = typeof result === 'string' ? result : String(result || '');
+                const { thinking, content } = separateThinking(text);
+
+                if (aborted.has(provider)) {
+                    resolve(null);
+                    return;
+                }
+
+                const elapsed = Date.now() - providerStartTime;
+                log.info('AI', `[Parallel] ✓ ${provider}/${model} succeeded (${content.length} chars, ${elapsed}ms)`);
+                try { const h = require('./providerHealthCache'); h.recordSuccess(provider, elapsed); } catch {}
+                resolve({ text: content, thinking, provider, model });
+            } catch (err) {
+                const msg = err.message || String(err);
+                errors.push({ provider, model, error: msg });
+                if (!aborted.has(provider)) {
+                    log.warn('AI', `[Parallel] ✗ ${provider} failed: ${msg.slice(0, 120)}`);
+                }
+                try { const h = require('./providerHealthCache'); h.recordFailure(provider, msg); } catch {}
+                if (provider === 'ollama') invalidateOllamaHealth();
+                if (provider === 'sglang') invalidateSglangHealth();
+                resolve(null);
+            }
+        });
+    };
+
+    const promises = parallelProviders.map((p, i) => attemptProvider(p, i));
+
+    return new Promise((resolve) => {
+        let settled = 0;
+        for (const promise of promises) {
+            promise.then((result) => {
+                if (result && !aborted.has('_done')) {
+                    aborted.add('_done');
+                    for (const p of parallelProviders) aborted.add(p);
+                    resolve(result);
+                }
+                settled++;
+                if (settled === parallelProviders.length) {
+                    resolve(null);
+                }
+            });
+        }
+    }).then(async (winner) => {
+        if (winner) return { ...winner, wasFailover: winner.provider !== preferredProvider };
+
+        log.error('AI', `[Parallel] ALL providers exhausted`, errors);
+        return callWithFallback({ chatHistory, userQuery, systemPrompt, options, preferredProvider, preferLocalFirst: false, userApiKeys, ollamaUrl });
+    });
+}
+
 module.exports = {
     callWithFallback,
+    parallelCallWithFallback,
     callFast,
     getFastModel,
     buildFallbackChain,

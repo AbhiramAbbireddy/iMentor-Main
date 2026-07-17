@@ -266,6 +266,12 @@ app.use("/api/knowledge-sources", authMiddleware, knowledgeSourceRoutes);
 app.use('/api/feedback', authMiddleware, feedbackRoutes);
 app.use('/api/gamification', authMiddleware, gamificationRoutes);
 
+// --- Course Matching Routes (CSV upload, validate, autocomplete) ---
+app.use('/api/course-matching', authMiddleware, require('./routes/index_skilltreeCourseMatching'));
+
+// --- Skill Tree Course Bridge (Course → Skill Tree reuse pipeline) ---
+app.use('/api/skill-tree', authMiddleware, require('./routes/skillTreeCourseBridge'));
+
 // --- Internal Service Routes (Python → Node.js callbacks, no JWT required) ---
 const { syncSkillTreeToMongo } = require('./services/skillTreeSyncService');
 app.post('/api/internal/skill-tree/sync', (req, res, next) => {
@@ -300,8 +306,10 @@ app.use('/api/study-mode', authMiddleware, studyModeRoutes); // Study questions 
 app.use('/api/debug', authMiddleware, debugRoutes);
 app.use('/api/progress', authMiddleware, require('./routes/progress'));
 app.use('/api/jobs', authMiddleware, require('./routes/jobs'));
-app.use('/api/quiz', authMiddleware, chatLimiter, quizRoutes); // [Team1] Quiz — rate-limited
+app.use('/api/quiz', authMiddleware, quizRoutes); // [Team1] Quiz generation, submission & grading
+app.use('/api/question-bank', authMiddleware, require('./routes/questionBank')); // Question Bank CRUD
 app.use('/api/adaptive-profile', authMiddleware, adaptiveProfileRoutes); // [Team8] Student adaptive learning profiles
+app.use('/api/assessment', authMiddleware, require('./routes/knowledgeAssessment')); // Knowledge Assessment Engine
 
 // --- Sentry Error Handler ---
 Sentry.setupExpressErrorHandler(app);
@@ -338,6 +346,14 @@ async function startServer() {
     // Courses are expected to be pre-configured via offline jobs
     
     await auditRedisUsage();
+
+    // --- Startup health check ---
+    try {
+      const { logHealthSummary } = require('./services/startupHealthCheck');
+      await logHealthSummary();
+    } catch (e) {
+      log.warn('HEALTH', `Health check failed: ${e.message}`);
+    }
 
     // --- Course material processing disabled on server startup ---
     // Use offline maintenance jobs (scripts/maintenanceJobs.js) for:
@@ -398,8 +414,21 @@ async function startServer() {
         }
       });
     };
-    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+  // Global production error handlers
+  process.on("unhandledRejection", (reason, promise) => {
+    log.error('SYSTEM', 'Unhandled Rejection', { reason: reason?.message || reason, stack: reason?.stack });
+    // Graceful shutdown
+    gracefulShutdown('UNHANDLED_REJECTION');
+  });
+
+  process.on("uncaughtException", (err) => {
+    log.error('SYSTEM', 'Uncaught Exception', { message: err.message, stack: err.stack });
+    // Graceful shutdown
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
+  });
   } catch (error) {
     log.error('SYSTEM', "Failed to start Node.js server", error);
     process.exit(1);
