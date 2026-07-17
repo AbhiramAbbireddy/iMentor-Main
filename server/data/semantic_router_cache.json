@@ -21,6 +21,9 @@
       "handler": "deepResearch",
       "confidence_threshold": 0.7
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "write a research paper on blockchain technology",
@@ -12371,6 +12374,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "ACADEMIC_SEARCH": {
     "config": {
@@ -12393,6 +12397,9 @@
       "handler": "academicSearch",
       "confidence_threshold": 0.6
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "find papers on attention mechanisms",
@@ -23714,6 +23721,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "WEB_SEARCH": {
     "config": {
@@ -23740,6 +23748,9 @@
       "handler": "webSearch",
       "confidence_threshold": 0.52
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "latest news on AI developments",
@@ -39177,6 +39188,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "TECHNICAL_CODING": {
     "config": {
@@ -39205,6 +39217,9 @@
       "llm_preference": "code",
       "confidence_threshold": 0.57
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "write python code to sort array",
@@ -55671,6 +55686,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "MATHEMATICAL_REASONING": {
     "config": {
@@ -55694,6 +55710,9 @@
       "llm_preference": "reasoning",
       "confidence_threshold": 0.68
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "solve quadratic equation x^2 + 5x + 6 = 0",
@@ -69073,6 +69092,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "CONCEPTUAL_EXPLANATION": {
     "config": {
@@ -69092,6 +69112,9 @@
       "handler": "standardWithRAG",
       "confidence_threshold": 0.7
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "explain how photosynthesis works",
@@ -77326,6 +77349,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "SOCRATIC_TUTORING": {
     "config": {
@@ -77351,6 +77375,9 @@
       "handler": "socraticTutor",
       "confidence_threshold": 0.72
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "teach me calculus step by step",
@@ -91759,6 +91786,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "DOCUMENT_RAG": {
     "config": {
@@ -91777,6 +91805,9 @@
       "handler": "documentRAG",
       "confidence_threshold": 0.7
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "summarize the uploaded document",
@@ -98982,6 +99013,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "ENTERTAINMENT": {
     "config": {
@@ -99000,6 +99032,9 @@
       "rejection_message": "I'm an academic learning assistant. I cannot help with entertainment, sports, or media recommendations.",
       "confidence_threshold": 0.56
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "recommend a good movie to watch",
@@ -108263,6 +108298,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "LIFESTYLE_PERSONAL": {
     "config": {
@@ -108278,6 +108314,9 @@
       "rejection_message": "I'm focused on academic and technical topics. I cannot provide lifestyle, fashion, or personal advice.",
       "confidence_threshold": 0.6
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "give me a recipe for chocolate cake",
@@ -114454,6 +114493,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "INAPPROPRIATE": {
     "config": {
@@ -114472,6 +114512,9 @@
       "rejection_message": "I cannot assist with inappropriate, unethical, or harmful requests.",
       "confidence_threshold": 0.57
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "tell me a dirty joke",
@@ -123735,6 +123778,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "MEMORY_RECALL": {
     "config": {
@@ -123754,6 +123798,9 @@
       "handler": "memoryRecall",
       "confidence_threshold": 0.75
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "what did we discuss last time",
@@ -131988,6 +132035,7 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   },
   "GREETING": {
     "config": {
@@ -132003,6 +132051,9 @@
       "handler": "greeting",
       "confidence_threshold": 0.7
     },
+<<<<<<< HEAD
+    "embeddings": []
+=======
     "embeddings": [
       {
         "text": "hello",
@@ -139208,5 +139259,6 @@
         ]
       }
     ]
+>>>>>>> upstream/master
   }
 }
