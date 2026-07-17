@@ -27,17 +27,41 @@ We have implemented an end-to-end token optimization pipeline designed to minimi
 We have implemented a comprehensive Model Optimization Framework that improves model routing decisions, tunes parameters dynamically on the fly, manages context windows safely, and ensures fault-tolerant provider recovery.
 
 ### Key Optimization Components
+
 * **Dynamic Context-Aware Parameter Tuning (`server/services/smartModelRouterService.js`):**
-  * Analyzes the query syntax for specific domain signals (e.g. code keywords, mathematical syntax).
-  * Automatically forces a highly deterministic low temperature (`0.2`) for math/code tasks to ensure precision.
-  * Adjusts `temperature` and `maxOutputTokens` dynamically (e.g. up to `8192` tokens and `0.2` temperature for deep research/reasoning modes).
+  * **Code & Math Detection:** Analyzes the syntax of queries for specific domain keywords (e.g. `def `, `class`, `const`, `matrix`, `integral`, `eigenvalue`).
+  * **Deterministic Forcing:** Automatically sets a highly precise temperature (`0.2`) for mathematical or code generation tasks to optimize factual correctness and syntactic validity.
+  * **Research-Aware Window Allocation:** Automatically scales `temperature` to `0.2` and allocates up to `8192` output tokens when in Deep Research mode to support elaborate long-form responses.
+  
 * **Hybrid Quality-Cost Routing:**
-  * Even when local SLMs/Ollama are active to minimize cost, the router will automatically pivot to more capable cloud models (Groq Llama 3.3 70B or Gemini 2.0 Flash) for high-complexity queries (score `>= 75`), preventing output quality degradation.
+  * Minimizes latency and costs by routing simple queries (complexity score `<= 35`) or standard questions to local SLMs/Ollama models.
+  * Automatically shifts high-complexity queries (complexity score `>= 75`) to capable cloud-backed fallback models (e.g., Llama 3.3 70B on Groq, Gemini 2.0 Flash) to prevent the generation of poor or incomplete answers.
+  * Adjusts target cloud providers based on token requirements (routing longer requests to Gemini and shorter requests to Groq).
+
 * **Automatic Context Window Management & History Truncation:**
-  * Prevents API crashes (HTTP 400/context overflow) by dynamically checking the total character/token length of the request.
-  * Safely truncates the oldest history messages first while ensuring the developer/system message and the current query are always preserved.
+  * Prevents upstream API failures (e.g. Groq 8k context length limits returning HTTP 400 bad requests).
+  * Measures context payload length dynamically using characters-to-tokens approximations.
+  * Automatically drops older conversation turns sequentially while strictly preserving developer/system instructions and the active user prompt.
+
 * **Resilient Provider Fallback & Health-Checks (`server/services/llmFallbackService.js`):**
-  * Fixed syntax errors, duplicate variable declarations, and duplicate switch cases to ensure the fallback engine works correctly across all providers (Gemini, Groq, SGLang, Ollama).
+  * Fixed duplicate variable declarations, duplicate switch cases, and duplicate Set definitions.
+  * Ensured seamless and robust fallback chain processing (`sglang` $\rightarrow$ `groq` $\rightarrow$ `gemini` $\rightarrow$ `ollama`) for both standard generation and chunked streaming modes.
+
+### Verification of Optimization Features
+
+We have built dedicated verification test suites to ensure both the Token and Model Optimization frameworks perform flawlessly.
+
+#### 1. Token Optimizer Tests
+Execute the following command to test minification, response expansion, case-preservation, JSON-safety, and split backtick safety:
+```bash
+node server/tests/test_token_optimizer.js
+```
+
+#### 2. Model Router Tests
+Execute the following command to verify complexity calculations, domain parameter tuning, hybrid routing logic, and context window truncation:
+```bash
+node server/tests/test_model_router.js
+```
 
 ---
 
